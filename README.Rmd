@@ -130,3 +130,11 @@ rtg_sub = rtg[1:5, ]
 rtg_sub
 ```
 
+## Converting tidygraph into sf objects
+
+```{r}
+rtg_edges = activate(rtg,edges) %>% mutate(geometry = promenade_min$geometry)
+
+st_as_sf(as.tibble(rtg_edges)) 
+```
+
