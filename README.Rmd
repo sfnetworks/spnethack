@@ -28,6 +28,7 @@ library(stplanr)
 library(dplyr)
 library(piggyback)
 library(tidygraph)
+library(sfnetworks)
 ```
 
 
@@ -108,6 +109,13 @@ To do this we can use all the points in the data 430 points on the `to` column a
 
 ## Route networks with sfnetworks
 
+```{r, eval=TRUE}
+p_sfn = sfn_asnetwork(promenade_min)
+plot(p_sfn)
+p_graph = sfn_network2graph(p_sfn)
+b = igraph::edge.betweenness(p_graph)
+plot(p_sfn, lwd = b / mean(b))
+```
 
 ## Route networks with spnetwork
 

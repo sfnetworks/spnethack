@@ -9,3 +9,10 @@ sfnet = function(x) {
   class(x) = c("sfnet", class(x))
   x
 }
+
+sfnetworks = function(x) {
+  xrnet = stplanr::SpatialLinesNetwork(x)
+  xtidy = tidygraph::as_tbl_graph(xrnet@g)
+  xtidy
+}
+

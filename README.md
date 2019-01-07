@@ -13,15 +13,11 @@ We’ll use the following packages:
 library(sf)
 library(osmdata)
 library(dodgr)
-#> Warning: package 'dodgr' was built under R version 3.5.2
 library(stplanr)
 library(dplyr)
 library(piggyback)
-<<<<<<< HEAD
-#> Warning: package 'piggyback' was built under R version 3.5.2
-=======
 library(tidygraph)
->>>>>>> 55f410dd775e4ba2d324ef1e958ab73f7f619cd1
+library(sfnetworks)
 ```
 
 # Data
@@ -49,9 +45,7 @@ The minimum dataset can be read-in as follows:
 
 ``` r
 pb_download("promenade-min.geojson")
-#> Warning in get_token(): Using default public GITHUB_TOKEN.
-#>                      Please set your own token
-#> <U+2714> Setting active project to 'C:/Users/Lore/Documents/spnethack'
+#> ✔ Setting active project to '/home/robin/repos/spnethack'
 #> All files up-to-date already
 promenade_min = read_sf("promenade-min.geojson")
 plot(promenade_min$geometry)
@@ -63,8 +57,6 @@ A slightly larger dataset can be read-in and plotted as follows:
 
 ``` r
 pb_download("promenade-way.geojson")
-#> Warning in get_token(): Using default public GITHUB_TOKEN.
-#>                      Please set your own token
 #> All files up-to-date already
 promenade_way = geojsonsf::geojson_sf("promenade-way.geojson")
 plot(promenade_way$geometry)
@@ -111,10 +103,27 @@ source(file = "dodgr-promenade.R")
 dodgr_flowmap(graph_f, linescale = 5)
 ```
 
-To do this we sample 100 000 points on the `to` column and the same
-number on the `from`, and it takes 0.6 sec.
+![](README_files/figure-gfm/promenade-dodgr-1.png)<!-- -->
+
+To do this we can use all the points in the data 430 points on the `to`
+column and the same number on the `from`, and it takes 0.6 sec.
 
 ## Route networks with sfnetworks
+
+``` r
+p_sfn = sfn_asnetwork(promenade_min)
+plot(p_sfn)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+
+``` r
+p_graph = sfn_network2graph(p_sfn)
+b = igraph::edge.betweenness(p_graph)
+plot(p_sfn, lwd = b / mean(b))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
 ## Route networks with spnetwork
 
@@ -158,4 +167,12 @@ rtg_sub
 #> [3,] .        . . . . .  .       . . . . . 84.70141 . . . . . .  .       .
 #> [4,] .        . . . . . 83.52986 . . . . .  .       . . . . . .  .       .
 #> [5,] .        . . . . .  .       . . . . .  .       . . . . . . 87.09183 .
+```
+
+## Converting tidygraph into sf objects
+
+``` r
+rtg_edges = activate(rtg,edges) %>% mutate(geometry = promenade_min$geometry)
+
+st_as_sf(as.tibble(rtg_edges)) 
 ```
