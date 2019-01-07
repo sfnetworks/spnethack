@@ -54,7 +54,7 @@ promenade = opq(bbox = "munster") %>%
   add_osm_feature(key = "name", value = "Promenade")
 ```
 
-## route networks with stplanr
+## Route networks with stplanr
 
 The code to create route network data is in `stplanr-promenade.R`. It
 can generate a ‘betweenness’ graph like this:
@@ -64,3 +64,11 @@ source(file = "stplanr-promenade.R")
 ```
 
 ![](README_files/figure-gfm/promenade-stplanr-1.png)<!-- -->
+
+## Route networks with dodgr
+
+## Route networks with sfnetworks
+
+## Route networks with spnetwork
+
+## Route networks with osmnx
