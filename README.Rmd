@@ -49,7 +49,7 @@ promenade_min = promenade_all %>%
 
 The minimum dataset can be read-in as follows:
 
-```{r, eval=TRUE}
+```{r plot1, eval=TRUE}
 pb_download("promenade-min.geojson")
 promenade_min = read_sf("promenade-min.geojson")
 plot(promenade_min$geometry)
@@ -64,4 +64,14 @@ plot(promenade_min$geometry)
 promenade = opq(bbox = "munster") %>% 
   add_osm_feature(key = "name", value = "Promenade")
 ```
+
+## route networks with stplanr
+
+The code to create route network data is in `stplanr-promenade.R`.
+It can generate a 'betweenness' graph like this:
+
+```{r promenade-stplanr, eval=TRUE}
+source(file = "stplanr-promenade.R")
+```
+
 

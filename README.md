@@ -45,7 +45,7 @@ promenade_min = read_sf("promenade-min.geojson")
 plot(promenade_min$geometry)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](README_files/figure-gfm/plot1-1.png)<!-- -->
 
 ## From osmdata (currently not working)
 
@@ -53,3 +53,14 @@ plot(promenade_min$geometry)
 promenade = opq(bbox = "munster") %>% 
   add_osm_feature(key = "name", value = "Promenade")
 ```
+
+## route networks with stplanr
+
+The code to create route network data is in `stplanr-promenade.R`. It
+can generate a ‘betweenness’ graph like this:
+
+``` r
+source(file = "stplanr-promenade.R")
+```
+
+![](README_files/figure-gfm/promenade-stplanr-1.png)<!-- -->
