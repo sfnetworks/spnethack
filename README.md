@@ -13,9 +13,11 @@ We’ll use the following packages:
 library(sf)
 library(osmdata)
 library(dodgr)
+#> Warning: package 'dodgr' was built under R version 3.5.2
 library(stplanr)
 library(dplyr)
 library(piggyback)
+#> Warning: package 'piggyback' was built under R version 3.5.2
 ```
 
 # Data
@@ -43,7 +45,9 @@ The minimum dataset can be read-in as follows:
 
 ``` r
 pb_download("promenade-min.geojson")
-#> ✔ Setting active project to '/home/robin/repos/spnethack'
+#> Warning in get_token(): Using default public GITHUB_TOKEN.
+#>                      Please set your own token
+#> <U+2714> Setting active project to 'C:/Users/Lore/Documents/spnethack'
 #> All files up-to-date already
 promenade_min = read_sf("promenade-min.geojson")
 plot(promenade_min$geometry)
@@ -55,6 +59,8 @@ A slightly larger dataset can be read-in and plotted as follows:
 
 ``` r
 pb_download("promenade-way.geojson")
+#> Warning in get_token(): Using default public GITHUB_TOKEN.
+#>                      Please set your own token
 #> All files up-to-date already
 promenade_way = geojsonsf::geojson_sf("promenade-way.geojson")
 plot(promenade_way$geometry)
@@ -62,7 +68,7 @@ plot(promenade_way$geometry)
 
 ![](README_files/figure-gfm/pway-1.png)<!-- -->
 
-## From osmdata 
+## From osmdata
 
 ``` r
 promenade_osmdata = opq(bbox = 'Muenster, DE') %>% 
@@ -91,11 +97,18 @@ source(file = "stplanr-promenade.R")
 
 ## Route networks with dodgr
 
-An example of how to create route data from sample points along the edges can be found `dodgr-promenade.R`, it can also generate a flow aggregate which is quite similar to the betweenness.
+An example of how to create route data from sample points along the
+edges can be found `dodgr-promenade.R`, it can also generate a flow
+aggregate which is quite similar to the betweenness.
 
 ``` r
 source(file = "dodgr-promenade.R")
+
+dodgr_flowmap(graph_f, linescale = 5)
 ```
+
+To do this we sample 100 000 points on the `to` column and the same
+number on the `from`, and it takes 0.6 sec.
 
 ## Route networks with sfnetworks
 

@@ -98,7 +98,12 @@ An example of how to create route data from sample points along the edges can be
 
 ```{r}
 source(file = "dodgr-promenade.R")
+
+dodgr_flowmap(graph_f, linescale = 5)
 ```
+
+To do this we sample 100 000 points on the `to` column and the same number on the `from`, and it takes 0.6 sec.
+
 
 ## Route networks with sfnetworks
 
