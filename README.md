@@ -62,11 +62,21 @@ plot(promenade_way$geometry)
 
 ![](README_files/figure-gfm/pway-1.png)<!-- -->
 
-## From osmdata (currently not working)
+## From osmdata 
 
 ``` r
-promenade = opq(bbox = "munster") %>% 
-  add_osm_feature(key = "name", value = "Promenade")
+promenade_osmdata = opq(bbox = 'Muenster, DE') %>% 
+  add_osm_feature(key = 'name', value = 'Promenade') %>% 
+  osmdata_sf %>% 
+  unique_osmdata()
+```
+
+## From dodgr
+
+``` r
+muenster = dodgr_streetnet('Muenster, DE')
+promenade_dodgr = muenster %>% filter(name == 'Promenade')
+```
 ```
 
 ## Route networks with stplanr
