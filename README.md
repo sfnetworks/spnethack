@@ -35,8 +35,11 @@ promenade_all = read_sf("promenade-all.geojson")
 summary(factor(promenade_all$highway))
 promenade_min = promenade_all %>% 
   filter(name == "Promenade")
+
+summary(is_linestring)
 promenade_way = promenade_all %>% 
-  filter(!is.na(highway))
+  filter(!is.na(highway)) %>% 
+  filter()
 # write_sf(promenade_way, "promenade-way.geojson")
 # write_sf(promenade_min, "promenade-min.geojson")
 ```
@@ -63,6 +66,15 @@ plot(promenade_way$geometry)
 ```
 
 ![](README_files/figure-gfm/pway-1.png)<!-- -->
+
+``` r
+summary(factor(st_geometry_type(promenade_way)))
+#> LINESTRING 
+#>       2020
+is_point = st_geometry_type(promenade_way) == "POINT"
+promenade_way = promenade_way[!is_point, ]
+promenade_way = st_cast(promenade_way, "LINESTRING")
+```
 
 ## From osmdata
 
@@ -99,7 +111,6 @@ aggregate which is quite similar to the betweenness.
 
 ``` r
 source(file = "dodgr-promenade.R")
-
 dodgr_flowmap(graph_f, linescale = 5)
 ```
 
@@ -124,6 +135,17 @@ plot(p_sfn, lwd = b / mean(b))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+
+### Munster example
+
+``` r
+p_sfn = sfn_asnetwork(promenade_way)
+plot(p_sfn)
+i = sfn_network2graph(p_sfn)
+b = igraph::edge.betweenness(i)
+p_sfn$edges$b = b
+plot(p_sfn, lwd = b / mean(b))
+```
 
 ## Route networks with spnetwork
 
@@ -175,4 +197,17 @@ rtg_sub
 rtg_edges = activate(rtg,edges) %>% mutate(geometry = promenade_min$geometry)
 
 st_as_sf(as.tibble(rtg_edges)) 
+```
+
+# Benchmark
+
+``` r
+system.time({rnet1 = SpatialLinesNetwork(promenade_way)})
+class(rnet1)
+system.time({
+  rnet2 = sfn_asnetwork(promenade_way)
+  i = sfn_network2graph(rnet2)
+})
+object.size(rnet1)
+object.size(rnet2)
 ```

@@ -47,8 +47,11 @@ promenade_all = read_sf("promenade-all.geojson")
 summary(factor(promenade_all$highway))
 promenade_min = promenade_all %>% 
   filter(name == "Promenade")
+
+summary(is_linestring)
 promenade_way = promenade_all %>% 
-  filter(!is.na(highway))
+  filter(!is.na(highway)) %>% 
+  filter()
 # write_sf(promenade_way, "promenade-way.geojson")
 # write_sf(promenade_min, "promenade-min.geojson")
 ```
@@ -67,6 +70,10 @@ A slightly larger dataset can be read-in and plotted as follows:
 pb_download("promenade-way.geojson")
 promenade_way = geojsonsf::geojson_sf("promenade-way.geojson")
 plot(promenade_way$geometry)
+summary(factor(st_geometry_type(promenade_way)))
+is_point = st_geometry_type(promenade_way) == "POINT"
+promenade_way = promenade_way[!is_point, ]
+promenade_way = st_cast(promenade_way, "LINESTRING")
 ```
 
 ## From osmdata 
@@ -100,7 +107,6 @@ An example of how to create route data from sample points along the edges can be
 
 ```{r promenade-dodgr, eval = TRUE}
 source(file = "dodgr-promenade.R")
-
 dodgr_flowmap(graph_f, linescale = 5)
 ```
 
@@ -116,6 +122,18 @@ p_graph = sfn_network2graph(p_sfn)
 b = igraph::edge.betweenness(p_graph)
 plot(p_sfn, lwd = b / mean(b))
 ```
+
+### Munster example
+
+```{r}
+p_sfn = sfn_asnetwork(promenade_way)
+plot(p_sfn)
+i = sfn_network2graph(p_sfn)
+b = igraph::edge.betweenness(i)
+p_sfn$edges$b = b
+plot(p_sfn, lwd = b / mean(b))
+```
+
 
 ## Route networks with spnetwork
 
@@ -144,5 +162,18 @@ rtg_sub
 rtg_edges = activate(rtg,edges) %>% mutate(geometry = promenade_min$geometry)
 
 st_as_sf(as.tibble(rtg_edges)) 
+```
+
+# Benchmark
+
+```{r}
+system.time({rnet1 = SpatialLinesNetwork(promenade_way)})
+class(rnet1)
+system.time({
+  rnet2 = sfn_asnetwork(promenade_way)
+  i = sfn_network2graph(rnet2)
+})
+object.size(rnet1)
+object.size(rnet2)
 ```
 
