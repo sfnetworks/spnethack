@@ -58,7 +58,7 @@ plot(promenade_min$geometry)
 
 
 
-## From geojson
+## From osmdata (currently not working)
 
 ```{r}
 promenade = opq(bbox = "munster") %>% 

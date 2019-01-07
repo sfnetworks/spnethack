@@ -47,7 +47,7 @@ plot(promenade_min$geometry)
 
 ![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
-## From geojson
+## From osmdata (currently not working)
 
 ``` r
 promenade = opq(bbox = "munster") %>% 
