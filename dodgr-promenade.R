@@ -3,7 +3,6 @@ muenster = dodgr_streetnet('Muenster, DE')
 promenade_dodgr = muenster %>% filter(name == 'Promenade')
 
 promenade_graph = weight_streetnet(promenade_dodgr, wt_profile = 'bicycle')
-# promenade_vert = dodgr_vertices(promenade_graph)
 
 ## Sample points along the route to create flows
 start = Sys.time()

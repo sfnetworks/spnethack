@@ -97,7 +97,7 @@ source(file = "stplanr-promenade.R")
 
 An example of how to create route data from sample points along the edges can be found `dodgr-promenade.R`, it can also generate a flow aggregate which is quite similar to the betweenness.
 
-```{r}
+```{r promenade-dodgr, eval = TRUE}
 source(file = "dodgr-promenade.R")
 
 dodgr_flowmap(graph_f, linescale = 5)
@@ -113,6 +113,7 @@ To do this we sample 100 000 points on the `to` column and the same number on th
 
 
 ## Route networks with osmnx
+
 
 ## Route networks with tidygraph
 
