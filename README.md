@@ -63,7 +63,7 @@ plot(promenade_way$geometry)
 
 ![](README_files/figure-gfm/pway-1.png)<!-- -->
 
-## From osmdata 
+## From osmdata
 
 ``` r
 promenade_osmdata = opq(bbox = 'Muenster, DE') %>% 
@@ -92,7 +92,9 @@ source(file = "stplanr-promenade.R")
 
 ## Route networks with dodgr
 
-An example of how to create route data from sample points along the edges can be found `dodgr-promenade.R`, it can also generate a flow aggregate which is quite similar to the betweenness.
+An example of how to create route data from sample points along the
+edges can be found `dodgr-promenade.R`, it can also generate a flow
+aggregate which is quite similar to the betweenness.
 
 ``` r
 source(file = "dodgr-promenade.R")
