@@ -77,7 +77,6 @@ promenade_osmdata = opq(bbox = 'Muenster, DE') %>%
 muenster = dodgr_streetnet('Muenster, DE')
 promenade_dodgr = muenster %>% filter(name == 'Promenade')
 ```
-```
 
 ## Route networks with stplanr
 
@@ -91,6 +90,12 @@ source(file = "stplanr-promenade.R")
 ![](README_files/figure-gfm/promenade-stplanr-1.png)<!-- -->
 
 ## Route networks with dodgr
+
+An example of how to create route data from sample points along the edges can be found `dodgr-promenade.R`, it can also generate a flow aggregate which is quite similar to the betweenness.
+
+``` r
+source(file = "dodgr-promenade.R")
+```
 
 ## Route networks with sfnetworks
 
