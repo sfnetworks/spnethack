@@ -61,7 +61,7 @@ plot(promenade_min$geometry)
 
 A slightly larger dataset can be read-in and plotted as follows:
 
-```{r, eval=TRUE}
+```{r promenade-way, eval=TRUE}
 pb_download("promenade-way.geojson")
 promenade_way = geojsonsf::geojson_sf("promenade-way.geojson")
 plot(promenade_way$geometry)

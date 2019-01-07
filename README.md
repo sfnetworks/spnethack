@@ -60,7 +60,7 @@ promenade_way = geojsonsf::geojson_sf("promenade-way.geojson")
 plot(promenade_way$geometry)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](README_files/figure-gfm/promenade-way-1.png)<!-- -->
 
 ## From osmdata (currently not working)
 
