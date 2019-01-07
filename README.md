@@ -30,8 +30,12 @@ follows:
 ``` r
 pb_download("promenade-all.geojson")
 promenade_all = read_sf("promenade-all.geojson")
+summary(factor(promenade_all$highway))
 promenade_min = promenade_all %>% 
   filter(name == "Promenade")
+promenade_way = promenade_all %>% 
+  filter(!is.na(highway))
+# write_sf(promenade_way, "promenade-way.geojson")
 # write_sf(promenade_min, "promenade-min.geojson")
 ```
 
@@ -46,6 +50,17 @@ plot(promenade_min$geometry)
 ```
 
 ![](README_files/figure-gfm/plot1-1.png)<!-- -->
+
+A slightly larger dataset can be read-in and plotted as follows:
+
+``` r
+pb_download("promenade-way.geojson")
+#> All files up-to-date already
+promenade_way = geojsonsf::geojson_sf("promenade-way.geojson")
+plot(promenade_way$geometry)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 ## From osmdata (currently not working)
 
