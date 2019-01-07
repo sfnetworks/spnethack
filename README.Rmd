@@ -27,6 +27,7 @@ library(dodgr)
 library(stplanr)
 library(dplyr)
 library(piggyback)
+library(tidygraph)
 ```
 
 
@@ -112,3 +113,19 @@ To do this we sample 100 000 points on the `to` column and the same number on th
 
 
 ## Route networks with osmnx
+
+## Route networks with tidygraph
+
+```{r tidygraph, eval=TRUE}
+rtg = as_tbl_graph(x = rstp@g)
+class(rtg)
+length(rtg)
+rtg$geometry = promenade_min$geometry
+plot(rtg)
+plot(rtg$geometry)
+
+# But fails with subsetting...
+rtg_sub = rtg[1:5, ]
+rtg_sub
+```
+
