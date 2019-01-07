@@ -16,6 +16,7 @@ library(dodgr)
 library(stplanr)
 library(dplyr)
 library(piggyback)
+library(tidygraph)
 ```
 
 # Data
@@ -87,3 +88,43 @@ source(file = "stplanr-promenade.R")
 ## Route networks with spnetwork
 
 ## Route networks with osmnx
+
+## Route networks with tidygraph
+
+``` r
+rtg = as_tbl_graph(x = rstp@g)
+class(rtg)
+#> [1] "tbl_graph" "igraph"
+length(rtg)
+#> [1] 10
+rtg$geometry = promenade_min$geometry
+plot(rtg)
+```
+
+![](README_files/figure-gfm/tidygraph-1.png)<!-- -->
+
+``` r
+plot(rtg$geometry)
+```
+
+![](README_files/figure-gfm/tidygraph-2.png)<!-- -->
+
+``` r
+
+# But fails with subsetting...
+rtg_sub = rtg[1:5, ]
+rtg_sub
+#> 5 x 31 sparse Matrix of class "dgCMatrix"
+#>                                                                   
+#> [1,]   .      388.3444  .        .       .   .        .      . . .
+#> [2,] 388.3444   .       .        .       .   .      663.5711 . . .
+#> [3,]   .        .       .       25.28429 .   .        .      . . .
+#> [4,]   .        .      25.28429  .       .   .        .      . . .
+#> [5,]   .        .       .        .       . 155.1238   .      . . .
+#>                                                                           
+#> [1,] 6.592897 . . . . .  .       . . . . .  .       . . . . . .  .       .
+#> [2,] .        . . . . .  .       . . . . .  .       . . . . . .  .       .
+#> [3,] .        . . . . .  .       . . . . . 84.70141 . . . . . .  .       .
+#> [4,] .        . . . . . 83.52986 . . . . .  .       . . . . . .  .       .
+#> [5,] .        . . . . .  .       . . . . .  .       . . . . . . 87.09183 .
+```
