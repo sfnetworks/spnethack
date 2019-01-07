@@ -6,8 +6,8 @@ promenade_graph = weight_streetnet(promenade_dodgr, wt_profile = 'bicycle')
 
 ## Sample points along the route to create flows
 start = Sys.time()
-from = sample(promenade_graph$from_id, size = 100000)
-to = sample(promenade_graph$to_id, size = 100000)
+from = sample(promenade_graph$from_id, size = 430)
+to = sample(promenade_graph$to_id, size = 430)
 flows = matrix(10*runif(
   length(from)*length(to)),
   nrow = length (from)
