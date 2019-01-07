@@ -14,6 +14,8 @@ library(sf)
 library(osmdata)
 library(dodgr)
 library(stplanr)
+library(dplyr)
+library(piggyback)
 ```
 
 # Data
@@ -21,6 +23,29 @@ library(stplanr)
 It makes sense to have some input data.
 
 ## From josm
+
+Data from OSM was downloaded with the `josm` GUI. It can be read-in as
+follows:
+
+``` r
+pb_download("promenade-all.geojson")
+promenade_all = read_sf("promenade-all.geojson")
+promenade_min = promenade_all %>% 
+  filter(name == "Promenade")
+# write_sf(promenade_min, "promenade-min.geojson")
+```
+
+The minimum dataset can be read-in as follows:
+
+``` r
+pb_download("promenade-min.geojson")
+#> ✔ Setting active project to '/home/robin/repos/spnethack'
+#> All files up-to-date already
+promenade_min = read_sf("promenade-min.geojson")
+plot(promenade_min$geometry)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 ## From geojson
 
