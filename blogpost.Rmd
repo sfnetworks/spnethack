@@ -9,20 +9,19 @@ Despite the existence of sf and tidygraph, R seems to lack a general, modern way
 
 This blogpost presents a general approach to store spatial networks in a tidy way by combining sf and tidygraph. At the same time, improvement points to make this approach more convenient, are discussed.
 
-## FTW data example
+## Example 1: Fietstelweek
 
 Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data on what routes cyclists take to get from their origins to their destinations. The data were collected between September 14th and 20th in 2015, and between September 19th and 25th in 2016, through a mobile app which makes use of the cellphone GPS to track the trips. Around 50 thousand people participated. The data are available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download, and include seperate spatial files for edges and nodes.
 
 To illustrate how such a spatial network could be stored in R, we use the Fietstelweek data for the municipality of Groningen as an example.
 
-```{r}
+```{r, results = FALSE, message = FALSE, warning = FALSE}
 library(piggyback)
+library(sf)
+
 pb_download("groningen_edges.gpkg")
 pb_download("groningen_nodes.gpkg")
-```
 
-```{r}
-library(sf)
 edges <- st_read("groningen_edges.gpkg")
 nodes <- st_read("groningen_nodes.gpkg")
 ```
@@ -38,3 +37,22 @@ Each edge has a `MULTILINESTRING` geometry and several attributes: a unique ID (
 ```{r}
 edges
 ```
+
+The `sf` class subclasses a `data.frame`, and the tidygraph package has a specific function to create a `tbl_graph` object from two data frames, where one contains the nodes and the other the edges. That is, we can easily construct a `tbl_graph` from the two `sf` objects that we created above. Regarding the edges data frame, it is important that the columns that specify the ID's of the source an target node are either the first two columns of the data frame, or are named 'to' and 'from', respectively. Both may be inconvenient and even unwanted, but for now, it unfortunately is the only way.
+
+```{r}
+# Reorder the columns in the edges data frame
+(edges <- edges[, c(2, 3, 1, c(4:ncol(edges)))])
+```
+
+```{r, eval = FALSE}
+# Construct a tbl_graph
+graph <- tbl_graph(nodes = nodes, edges = edges)
+```
+
+Oops, something seems to go wrong! 
+
+
+## Example 2: Australian Electricity Transmission Lines
+
+
