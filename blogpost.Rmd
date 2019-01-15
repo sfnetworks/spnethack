@@ -7,7 +7,7 @@ The R community can lean on very powerful packages for spatial vector data analy
 
 Despite the existence of sf and tidygraph, R seems to lack a general, modern way to store networks whose nodes are embedded in space, i.e. spatial networks. The [stplanr](https://github.com/ropensci/stplanr) package contains the `SpatialLinesNetwork` class. This, however, is based on [sp](https://github.com/edzer/sp/), a package for spatial data analysis launched in 2005, that is used less since sf entered the stage. The same yields for [spnetwork](https://github.com/edzer/spnetwork), a package that combined sp and igraph. More recently, [dodgr](https://github.com/ATFutures/dodgr) was created. This package provides very fast analytical tools for spatial networks, but deals solely with dual-weighted directed graphs, mainly used for calculating shortest paths in street networks.
 
-This blogpost presents, with help of two examples, a general approach to store spatial networks in a tidy way by combining sf and tidygraph. Along the way, possible improvement points to make this approach more convenient will show up.
+This blogpost presents, with help of two examples, a general approach to store spatial networks in a tidy way by combining sf and tidygraph. Along the way, we will see that there is still a way to make this approach clear, convenient and efficient.
 
 ## Example 1: Fietstelweek
 
@@ -74,7 +74,7 @@ It seems like the street network of a medium sized city (Groningen has 230.000 i
 For now, let's take a subset of the original network, just to show how things could work when the memory limit was not there. 
 
 ```{r, warning = FALSE}
-selection = (st_bbox(edges) + c(15000, 8000, 0, 0)) %>%
+selection = (st_bbox(edges) + c(7000, 4000, 7000, 4000)) %>%
   st_as_sfc()
 
 edges = st_intersection(edges, selection)
@@ -86,52 +86,36 @@ nodes = nodes %>%
 qtm(st_geometry(edges))
 ```
 
+*(to be continued..)*
+
 ## Example 2: Australian Electricity Transmission Lines
 
-Another example of a Spatial Network can come from Electricity Transmission Lines (ETL). They are spatial networks since they have coordinates somewhere on Earth. We can take an example from the far edge of it, Australia!
+The Fietstelweek data is easy in a way, since the data already come in a network structure, with edges and nodes. Let's look at another example, where we start with only a set of lines: the electricity transmission lines in Australia.
 
-```{r, eval = F}
-library(piggyback)
+```{r, results = FALSE, message = FALSE, warning = FALSE}
 pb_download("etl_aus.geojson")
 ```
 
 ```{r, results = FALSE, message = FALSE, warning = FALSE}
-library(sf)
-etl_aus <- st_read("etl_aus.geojson")
+etl <- st_read("etl_aus.geojson") %>% select(Name)
 ```
-
-We can see here that the ETL dataset is only composed by lines. Let's plot them to get a sense of how they look like: 
 
 ```{r}
-plot(st_geometry(etl_aus))
+etl
 ```
 
-The lines would correspond to the edges, however, the nodes are not present if such dataset would be represented as a network. This can be obtained by using some R coding, however to illustrate it on a higher scale, we will only look at data for Sidney.  
-
-```{r}
-## Getting the Sidney outline from OSM
-library(osmdata)
-sidneybb <- getbb('Sidney, Australia', format_out = 'sf_polygon')
-
-## Intersecting the national ETL data to Sidney
-etl_sidney <- etl_aus[sidneybb, op = st_intersects]
-
-## Simplifying the dataset, to eliminate not used information
-library(dplyr)
-etl_sidney <- etl_sidney %>% select(Name)
-
-## Plotting the result
-plot(st_geometry(etl_sidney))
+```{r, fig.width = 9}
+qtm(etl)
 ```
 
-To concert the lines into a network, we would have to generate the edges and nodes, in a way that the start and end point of the lines are the nodes of the network. Nodes might repeat among edges, so we should look into unique IDs. We can write a helper function to do such a task:
+The lines correspond to the edges, but the nodes are not present. We have to calculate them, in a way that the start and end points of the lines are the nodes of the network. Note here that Start and/or end points might be shared by multiple lines, which should result in only one node. We can write a helper function to do this complete task:
 
 ```{r}
 line2network <- function(x) {
   # The edges of the network are simply the linestrings from the sf object
   edges <- x
 
-  ## Add a unique ID to each edge
+  # Add a unique ID to each edge
   edges <- edges %>%
     mutate(edgeID = c(1:n()))
   
@@ -141,9 +125,9 @@ line2network <- function(x) {
   # Filter start and endpoints by grouping by L1 and selecting first and last entry of each group
   # Then, assign a value of 0 to startpoints (source) and 1 to endpoints (target)
   nodes <- x %>%
-    sf::st_coordinates() %>%
+    st_coordinates() %>%
     as.data.frame() %>%
-    group_by(.data$L1) %>%
+    group_by(L1) %>%
     slice(c(1, n())) %>%
     ungroup() %>%
     mutate(startend = rep(c(0, 1), times = n()/2))
@@ -153,7 +137,7 @@ line2network <- function(x) {
   # For this, group the nodes data by the combination (X, Y)
   # Then, retrieve group indices, that form unique IDs for each node
   node_ids <- nodes %>%
-    group_by(.data$X, .data$Y) %>%
+    group_by(X, Y) %>%
     group_indices()
   
   # Add this unique node ID as a column to the nodes data
@@ -164,12 +148,12 @@ line2network <- function(x) {
   # One column represents the unique node ID of the startnode (source) of each edge
   # The other column represents the unique node ID of the endnode (target) of each edge
   sources <- nodes %>%
-    filter(.data$startend == 0) %>%
-    pull(.data$nodeID)
+    filter(startend == 0) %>%
+    pull(nodeID)
   
   targets <- nodes %>%
-    filter(.data$startend == 1) %>%
-    pull(.data$nodeID)
+    filter(startend == 1) %>%
+    pull(nodeID)
   
   edges <- edges %>%
     mutate(nodeID_source = sources, nodeID_target = targets)
@@ -181,43 +165,50 @@ line2network <- function(x) {
   # Finally, convert the nodes data into an sf object with point geometry
   # The CRS of the nodes sf object should be the same as of the inputted sf object
   nodes <- nodes %>%
-    distinct(.data$nodeID, .keep_all = TRUE) %>%
-    select(-c(.data$L1, .data$startend)) %>%
+    distinct(nodeID, .keep_all = TRUE) %>%
+    select(-c(L1, startend)) %>%
     as.data.frame() %>%
-    sf::st_as_sf(coords = c("X", "Y")) %>%
-    sf::st_set_crs(sf::st_crs(x))
+    st_as_sf(coords = c("X", "Y")) %>%
+    st_set_crs(st_crs(x))
   
-  # Finally, add a length column to the edges data
-  # This column will represent the length in meters of each edge
-  edges <- edges %>%
-    mutate(length = sf::st_length(.data$geometry))
-  
-  net <- list(edges, nodes)
-  
-  setNames(net, c('edges','nodes'))
+  # Output a list with the two sf data frames
+  network <- list(edges, nodes)
+  setNames(network, c('edges','nodes'))
 }
 ```
 
-And then convert the data into a set of edges and nodes:
+And then convert the data into a list of edges and nodes:
 
 ```{r}
-etl_net <- line2network(etl_sidney)
-etl_net
+etl_network <- line2network(etl)
+etl_network
+```
+
+```{r}
+tm_shape(st_zm(etl_network$edges, drop = T)) +
+  tm_lines() +
+tm_shape(etl_network$nodes) +
+  tm_dots()
 ```
 
 We can even see on the Name attribute that there is some sort of origin and destination: `Penrith to Warrimoo`, where Penrith would correspond to node 8 and Warrimo to node 11. 
 
-Now we can plot both the edges and the nodes to see what we did, or even better use again tmap to view it interactively.
-
 ```{r}
-library(tmap)
-tmap_mode('view')
-
-tm_shape(sidneybb) +
-  tm_borders(col = 'red') +
-  tm_shape(st_zm(etl_net$edges, drop = T)) +
-  tm_lines(col = 'grey30') +
-  tm_shape(etl_net$nodes) +
-  tm_dots(col = 'orange')
+# # Getting the Sidney outline from OSM
+# library(osmdata)
+# sidneybb <- getbb('Sidney, Australia', format_out = 'sf_polygon')
+# 
+# # Intersecting the national ETL data to Sidney
+# etl_sidney <- etl_aus[sidneybb, op = st_intersects]
 ```
 
+```{r}
+# tm_shape(sidneybb) +
+#   tm_borders(col = 'red') +
+#   tm_shape(st_zm(etl_net$edges, drop = T)) +
+#   tm_lines(col = 'grey30') +
+#   tm_shape(etl_net$nodes) +
+#   tm_dots(col = 'orange')
+```
+
+*(to be continued..)*
