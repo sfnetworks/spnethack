@@ -9,3 +9,4 @@ Despite the existence of sf and tidygraph, R seems to lack a general, modern way
 
 This blogpost presents a general approach to store spatial networks in a tidy way by combining sf and tidygraph. At the same time, improvement points to make this approach more convenient, are discussed.
 
+
