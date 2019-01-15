@@ -1,7 +1,7 @@
 The R community can lean on very powerful packages for spatial vector
 data analysis ([sf](https://github.com/r-spatial/sf)) and network
 analysis ([tidygraph](https://github.com/thomasp85/tidygraph)), that
-both support the popular 'tidy' approach to data science. In sf, spatial
+both support the popular ‘tidy’ approach to data science. In sf, spatial
 vector data are stored as objects of class `sf`, which are flat tables
 with a list column that contains the geometry of the features. Tidygraph
 is build on top of the widely-used
@@ -11,13 +11,14 @@ enables the user to manipulate both the edges and nodes elements as
 being flat tables.
 
 Despite the existence of sf and tidygraph, R seems to lack a general,
-modern way to store networks whose nodes are embedded in space, i.e.
-spatial networks. The [stplanr](https://github.com/ropensci/stplanr)
-package contains the `SpatialLinesNetwork` class. This, however, is
-based on [sp](https://github.com/edzer/sp/), a package for spatial data
-analysis launched in 2005, that is used less since sf entered the stage.
-The same yields for [spnetwork](https://github.com/edzer/spnetwork), a
-package that combined sp and igraph. More recently,
+modern way to store networks whose nodes are embedded in space,
+i.e. spatial networks. The
+[stplanr](https://github.com/ropensci/stplanr) package contains the
+`SpatialLinesNetwork` class. This, however, is based on
+[sp](https://github.com/edzer/sp/), a package for spatial data analysis
+launched in 2005, that is used less since sf entered the stage. The same
+yields for [spnetwork](https://github.com/edzer/spnetwork), a package
+that combined sp and igraph. More recently,
 [dodgr](https://github.com/ATFutures/dodgr) was created. This package
 provides very fast analytical tools for spatial networks, but deals
 solely with dual-weighted directed graphs, mainly used for calculating
@@ -27,8 +28,13 @@ This blogpost presents a general approach to store spatial networks in a
 tidy way by combining sf and tidygraph. At the same time, improvement
 points to make this approach more convenient, are discussed.
 
+<<<<<<< HEAD
+FTW data example
+----------------
+=======
 Example 1: Fietstelweek
 -----------------------
+>>>>>>> 5847024f6a364476c67dd02e5ae342b83e827b64
 
 Fietstelweek is, translated from Dutch, the National Bicycle Count week.
 It is a crowdsourced initiative to collect data on what routes cyclists
@@ -44,6 +50,42 @@ To illustrate how such a spatial network could be stored in R, we use
 the Fietstelweek data for the municipality of Groningen as an example.
 
     library(piggyback)
+<<<<<<< HEAD
+    pb_download("groningen_edges.gpkg")
+
+    ## <U+2714> Setting active project to 'E:/spnethack'
+
+    ## All files up-to-date already
+
+    pb_download("groningen_nodes.gpkg")
+
+    ## All files up-to-date already
+
+    library(sf)
+
+    ## Linking to GEOS 3.6.1, GDAL 2.2.3, PROJ 4.9.3
+
+    edges <- st_read("groningen_edges.gpkg")
+
+    ## Reading layer `edges' from data source `E:\spnethack\groningen_edges.gpkg' using driver `GPKG'
+    ## Simple feature collection with 13243 features and 11 fields
+    ## geometry type:  MULTILINESTRING
+    ## dimension:      XY
+    ## bbox:           xmin: 719848.4 ymin: 7016376 xmax: 747384.2 ymax: 7032180
+    ## epsg (SRID):    NA
+    ## proj4string:    +proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs
+
+    nodes <- st_read("groningen_nodes.gpkg")
+
+    ## Reading layer `nodes' from data source `E:\spnethack\groningen_nodes.gpkg' using driver `GPKG'
+    ## Simple feature collection with 7615 features and 7 fields
+    ## geometry type:  POINT
+    ## dimension:      XY
+    ## bbox:           xmin: 720027 ymin: 7016407 xmax: 746520 ymax: 7032136
+    ## epsg (SRID):    NA
+    ## proj4string:    +proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs
+
+=======
     library(sf)
 
     pb_download("groningen_edges.gpkg")
@@ -52,6 +94,7 @@ the Fietstelweek data for the municipality of Groningen as an example.
     edges <- st_read("groningen_edges.gpkg")
     nodes <- st_read("groningen_nodes.gpkg")
 
+>>>>>>> 5847024f6a364476c67dd02e5ae342b83e827b64
 Each node has a `POINT` geometry and several attributes: a unique ID
 (`KNOOPNUMME`), the average waiting time at the node (`TIJD`), and the
 number of routes that passed the node (`AANTAL`).
@@ -89,7 +132,11 @@ number of routes that passed the node (`AANTAL`).
     ## 10 POINT (737877 7018747)
 
 Each edge has a `MULTILINESTRING` geometry and several attributes: a
+<<<<<<< HEAD
+unique ID (`LINKNUMMER`), the ID’s of the source and target nodes, the
+=======
 unique ID (`LINKNUMMER`), the ID's of the source and target nodes, the
+>>>>>>> 5847024f6a364476c67dd02e5ae342b83e827b64
 functional type of the edge (`HIGHWAY`), the average speed, and the
 number of routes using that edge (`INTENSITEI`).
 
@@ -135,6 +182,8 @@ number of routes using that edge (`INTENSITEI`).
     ## 8  MULTILINESTRING ((729630.1 ...
     ## 9  MULTILINESTRING ((728993.5 ...
     ## 10 MULTILINESTRING ((728296.7 ...
+<<<<<<< HEAD
+=======
 
 The `sf` class subclasses a `data.frame`, and the tidygraph package has
 a specific function to create a `tbl_graph` object from two data frames,
@@ -194,3 +243,4 @@ it unfortunately is the only way.
     graph <- tbl_graph(nodes = nodes, edges = edges)
 
 Oops, something seems to go wrong!
+>>>>>>> 5847024f6a364476c67dd02e5ae342b83e827b64

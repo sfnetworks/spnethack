@@ -7,22 +7,24 @@ The R community can lean on very powerful packages for spatial vector data analy
 
 Despite the existence of sf and tidygraph, R seems to lack a general, modern way to store networks whose nodes are embedded in space, i.e. spatial networks. The [stplanr](https://github.com/ropensci/stplanr) package contains the `SpatialLinesNetwork` class. This, however, is based on [sp](https://github.com/edzer/sp/), a package for spatial data analysis launched in 2005, that is used less since sf entered the stage. The same yields for [spnetwork](https://github.com/edzer/spnetwork), a package that combined sp and igraph. More recently, [dodgr](https://github.com/ATFutures/dodgr) was created. This package provides very fast analytical tools for spatial networks, but deals solely with dual-weighted directed graphs, mainly used for calculating shortest paths in street networks.
 
-This blogpost presents a general approach to store spatial networks in a tidy way by combining sf and tidygraph. At the same time, improvement points to make this approach more convenient, are discussed.
+This blogpost presents, with help of two examples, a general approach to store spatial networks in a tidy way by combining sf and tidygraph. Along the way, possible improvement points to make this approach more convenient will show up.
 
 ## Example 1: Fietstelweek
 
 Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data on what routes cyclists take to get from their origins to their destinations. The data were collected between September 14th and 20th in 2015, and between September 19th and 25th in 2016, through a mobile app which makes use of the cellphone GPS to track the trips. Around 50 thousand people participated. The data are available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download, and include seperate spatial files for edges and nodes.
 
-To illustrate how such a spatial network could be stored in R, we use the Fietstelweek data for the municipality of Groningen as an example.
+To illustrate how such a spatial network could be stored in R, we use the Fietstelweek data for the municipality of Groningen as an example. The data has some flaws in the form of negative node indices in the edges frame, which we need to remove first.
 
 ```{r, results = FALSE, message = FALSE, warning = FALSE}
 library(piggyback)
 library(sf)
+library(tidyverse)
 
 pb_download("groningen_edges.gpkg")
 pb_download("groningen_nodes.gpkg")
 
-edges <- st_read("groningen_edges.gpkg")
+edges <- st_read("groningen_edges.gpkg") %>% 
+  filter(SOURCE > 0 & TARGET > 0)
 nodes <- st_read("groningen_nodes.gpkg")
 ```
 
@@ -32,25 +34,54 @@ Each node has a `POINT` geometry and several attributes: a unique ID (`KNOOPNUMM
 nodes
 ```
 
+```{r, message = FALSE, fig.width = 9}
+library(tmap)
+tmap_mode('view')
+qtm(st_geometry(nodes))
+```
+
 Each edge has a `MULTILINESTRING` geometry and several attributes: a unique ID (`LINKNUMMER`), the ID's of the source and target nodes, the functional type of the edge (`HIGHWAY`), the average speed, and the number of routes using that edge (`INTENSITEI`).
 
 ```{r}
 edges
 ```
 
-The `sf` class subclasses a `data.frame`, and the tidygraph package has a specific function to create a `tbl_graph` object from two data frames, where one contains the nodes and the other the edges. That is, we can easily construct a `tbl_graph` from the two `sf` objects that we created above. Regarding the edges data frame, it is important that the columns that specify the ID's of the source an target node are either the first two columns of the data frame, or are named 'to' and 'from', respectively. Both may be inconvenient and even unwanted, but for now, it unfortunately is the only way.
-
-```{r}
-# Reorder the columns in the edges data frame
-(edges <- edges[, c(2, 3, 1, c(4:ncol(edges)))])
+```{r, fig.width = 9}
+qtm(st_geometry(edges))
 ```
 
-```{r, error = TRUE}
-# Construct a tbl_graph
+The `sf` class subclasses a `data.frame`, and the tidygraph package has a specific function to create a `tbl_graph` object from two data frames, where one contains the nodes and the other the edges. That is, we can easily construct a `tbl_graph` from the two `sf` objects that we created above. Regarding the edges data frame, it is important that the columns that specify the ID's of the source an target node are either the first two columns of the data frame, or are named 'to' and 'from', respectively. Both may be inconvenient and even unwanted, but for now, it unfortunately is the only way.
+
+```{r, message = FALSE, warning = FALSE}
+edges <- edges %>% select(SOURCE, TARGET, LINKNUMMER, everything())
+colnames(edges)
+```
+
+```{r, error = TRUE, message = FALSE, warning = FALSE}
+library(tidygraph)
+
 graph <- tbl_graph(nodes = nodes, edges = edges)
 ```
 
-Oops, something seems to go wrong! Inside the tbl_graph function, the first two columns of the edges data frame are converted into a matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside tbl_graph has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame`, or `tibble`, before we can construct a `tbl_graph`.
+Oops, something seems to go wrong! Inside the tbl_graph function, the first two columns of the edges data frame are converted into a matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside tbl_graph has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame` - or, to keep it tidy, a `tibble` - before we can construct a `tbl_graph`.
 
-```{r}
-graph <- tbl_graph(nodes = nodes, edges = as.data.frame(edges))
+```{r, error = TRUE}
+graph <- tbl_graph(nodes = nodes, edges = as_tibble(edges))
+``` 
+
+It seems like the street network of a medium sized city (Groningen has 230.000 inhabitants) is already too large for tidygraph to work with, which seems to be caused by the underlying igraph package. This is very inconvenient, since a lot op spatial network will even be considerably larger than that.
+
+For now, let's take a subset of the original network, just to show how things could work when the memory limit was not there. 
+
+```{r, warning = FALSE}
+selection = (st_bbox(edges) + c(15000, 8000, 0, 0)) %>%
+  st_as_sfc()
+
+edges = st_intersection(edges, selection)
+nodes = nodes %>%
+  filter(KNOOPNUMME %in% c(edges$SOURCE, edges$TARGET))
+```
+
+```{r, fig.width = 9}
+qtm(st_geometry(edges))
+```
