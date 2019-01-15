@@ -9,3 +9,32 @@ Despite the existence of sf and tidygraph, R seems to lack a general, modern way
 
 This blogpost presents a general approach to store spatial networks in a tidy way by combining sf and tidygraph. At the same time, improvement points to make this approach more convenient, are discussed.
 
+## FTW data example
+
+Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data about daily bike trips which will serve to improve the cycling infrastructure of the national, regional, and local bike network in the Netherlands.
+
+The data was collected during a week, between September 14th and 20th, for 2015, and between September 19th and 25th for 2016. The data collection is performed through a mobile app which makes use of the cellphone GPS to track the trips.
+
+Around 50 thousand people have participated in this joint effort gathering data on what routes cyclists take to get from their origins to their destinations, their speed, at what time, how many people use the same routes, and where the major delays are. 
+
+The data is effectively available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download, and includes spatial files for edges and nodes (conforming a network), and a table for routes during different times of the day for the seven days.
+
+The data contains what would be viewed as an ideal spatial network, including 'edges' and 'nodes', as well as 'route' data. To illustrate this, we can look into the municipality of Groningen. 
+
+```{r}
+library(piggyback)
+pb_download("groningen_edges.gpkg")
+pb_download("groningen_nodes.gpkg")
+```
+
+```{r}
+library(sf)
+edges <- st_read("groningen_edges.gpkg")
+nodes <- st_read("groningen_nodes.gpkg")
+```
+
+```{r}
+summary(edges)
+summary(nodes)
+```
+

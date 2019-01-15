@@ -2,4 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.Renviron
 promenade-*
+ftw/
+groningen*
