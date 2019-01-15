@@ -85,3 +85,139 @@ nodes = nodes %>%
 ```{r, fig.width = 9}
 qtm(st_geometry(edges))
 ```
+
+## Example 2: Australian Electricity Transmission Lines
+
+Another example of a Spatial Network can come from Electricity Transmission Lines (ETL). They are spatial networks since they have coordinates somewhere on Earth. We can take an example from the far edge of it, Australia!
+
+```{r, eval = F}
+library(piggyback)
+pb_download("etl_aus.geojson")
+```
+
+```{r, results = FALSE, message = FALSE, warning = FALSE}
+library(sf)
+etl_aus <- st_read("etl_aus.geojson")
+```
+
+We can see here that the ETL dataset is only composed by lines. Let's plot them to get a sense of how they look like: 
+
+```{r}
+plot(st_geometry(etl_aus))
+```
+
+The lines would correspond to the edges, however, the nodes are not present if such dataset would be represented as a network. This can be obtained by using some R coding, however to illustrate it on a higher scale, we will only look at data for Sidney.  
+
+```{r}
+## Getting the Sidney outline from OSM
+library(osmdata)
+sidneybb <- getbb('Sidney, Australia', format_out = 'sf_polygon')
+
+## Intersecting the national ETL data to Sidney
+etl_sidney <- etl_aus[sidneybb, op = st_intersects]
+
+## Simplifying the dataset, to eliminate not used information
+library(dplyr)
+etl_sidney <- etl_sidney %>% select(Name)
+
+## Plotting the result
+plot(st_geometry(etl_sidney))
+```
+
+To concert the lines into a network, we would have to generate the edges and nodes, in a way that the start and end point of the lines are the nodes of the network. Nodes might repeat among edges, so we should look into unique IDs. We can write a helper function to do such a task:
+
+```{r}
+line2network <- function(x) {
+  # The edges of the network are simply the linestrings from the sf object
+  edges <- x
+
+  ## Add a unique ID to each edge
+  edges <- edges %>%
+    mutate(edgeID = c(1:n()))
+  
+  # The nodes are the startpoints and endpoints of the linestrings
+  # The function st_coordinates gets the coordinates of all the points of a line
+  # The column L1 specifies to which line a set of point coordinates belongs
+  # Filter start and endpoints by grouping by L1 and selecting first and last entry of each group
+  # Then, assign a value of 0 to startpoints (source) and 1 to endpoints (target)
+  nodes <- x %>%
+    sf::st_coordinates() %>%
+    as.data.frame() %>%
+    group_by(.data$L1) %>%
+    slice(c(1, n())) %>%
+    ungroup() %>%
+    mutate(startend = rep(c(0, 1), times = n()/2))
+  
+  # If lines share startpoint and/or endpoint, this point should be one single node
+  # That is, duplicated points in the nodes data should have the same unique node ID
+  # For this, group the nodes data by the combination (X, Y)
+  # Then, retrieve group indices, that form unique IDs for each node
+  node_ids <- nodes %>%
+    group_by(.data$X, .data$Y) %>%
+    group_indices()
+  
+  # Add this unique node ID as a column to the nodes data
+  nodes <- nodes %>%
+    mutate(nodeID = node_ids)
+  
+  # Add two columns to the edges data
+  # One column represents the unique node ID of the startnode (source) of each edge
+  # The other column represents the unique node ID of the endnode (target) of each edge
+  sources <- nodes %>%
+    filter(.data$startend == 0) %>%
+    pull(.data$nodeID)
+  
+  targets <- nodes %>%
+    filter(.data$startend == 1) %>%
+    pull(.data$nodeID)
+  
+  edges <- edges %>%
+    mutate(nodeID_source = sources, nodeID_target = targets)
+  
+  # The source and target node IDs are added to the edges data
+  # Now, duplicate points can be removed from the nodes data
+  # That is, each node will only occur once in the nodes data
+  # Then, columns L1 and startend are not appropriate anymore and should be removed
+  # Finally, convert the nodes data into an sf object with point geometry
+  # The CRS of the nodes sf object should be the same as of the inputted sf object
+  nodes <- nodes %>%
+    distinct(.data$nodeID, .keep_all = TRUE) %>%
+    select(-c(.data$L1, .data$startend)) %>%
+    as.data.frame() %>%
+    sf::st_as_sf(coords = c("X", "Y")) %>%
+    sf::st_set_crs(sf::st_crs(x))
+  
+  # Finally, add a length column to the edges data
+  # This column will represent the length in meters of each edge
+  edges <- edges %>%
+    mutate(length = sf::st_length(.data$geometry))
+  
+  net <- list(edges, nodes)
+  
+  setNames(net, c('edges','nodes'))
+}
+```
+
+And then convert the data into a set of edges and nodes:
+
+```{r}
+etl_net <- line2network(etl_sidney)
+etl_net
+```
+
+We can even see on the Name attribute that there is some sort of origin and destination: `Penrith to Warrimoo`, where Penrith would correspond to node 8 and Warrimo to node 11. 
+
+Now we can plot both the edges and the nodes to see what we did, or even better use again tmap to view it interactively.
+
+```{r}
+library(tmap)
+tmap_mode('view')
+
+tm_shape(sidneybb) +
+  tm_borders(col = 'red') +
+  tm_shape(st_zm(etl_net$edges, drop = T)) +
+  tm_lines(col = 'grey30') +
+  tm_shape(etl_net$nodes) +
+  tm_dots(col = 'orange')
+```
+
