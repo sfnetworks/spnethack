@@ -13,15 +13,9 @@ This blogpost presents a general approach to store spatial networks in a tidy wa
 =======
 ## FTW data example
 
-Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data about daily bike trips which will serve to improve the cycling infrastructure of the national, regional, and local bike network in the Netherlands.
+Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data on what routes cyclists take to get from their origins to their destinations. The data were collected between September 14th and 20th in 2015, and between September 19th and 25th in 2016, through a mobile app which makes use of the cellphone GPS to track the trips. Around 50 thousand people participated. The data are available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download, and include seperate spatial files for edges and nodes.
 
-The data was collected during a week, between September 14th and 20th, for 2015, and between September 19th and 25th for 2016. The data collection is performed through a mobile app which makes use of the cellphone GPS to track the trips.
-
-Around 50 thousand people have participated in this joint effort gathering data on what routes cyclists take to get from their origins to their destinations, their speed, at what time, how many people use the same routes, and where the major delays are. 
-
-The data is effectively available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download, and includes spatial files for edges and nodes (conforming a network), and a table for routes during different times of the day for the seven days.
-
-The data contains what would be viewed as an ideal spatial network, including 'edges' and 'nodes', as well as 'route' data, that will not be discussed in this blog. To illustrate this, we can look into the municipality of Groningen. 
+To illustrate how such a spatial network could be stored in R, we use the Fietstelweek data for the municipality of Groningen as an example.
 
 ```{r}
 library(piggyback)
@@ -35,18 +29,14 @@ edges <- st_read("groningen_edges.gpkg")
 nodes <- st_read("groningen_nodes.gpkg")
 ```
 
-The edge data is loaded as a `MULTILINESTRING` geometry, while the nodes are  `POINT` geometries. 
-
-The `nodes` object contains a list of nodes with their codes (`KNOOPNUMME`), along with the average waiting time at each node (`TIJD`), and the number of routes that passed that node (`AANTAL`). 
+Each node has a `POINT` geometry and several attributes: a unique ID (`KNOOPNUMME`), the average waiting time at the node (`TIJD`), and the number of routes that passed the node (`AANTAL`). 
 
 ```{r}
 nodes
 ```
 
-The `edges` contain a code for each edge (`LINKNUMMER`), the source and target nodes, the functional type of the edge (`HIGHWAY`), the average speed, and the number of routes using that edge (`INTENSITEI`).
+Each edge has a `MULTILINESTRING` geometry and several attributes: a unique ID (`LINKNUMMER`), the ID's of the source and target nodes, the functional type of the edge (`HIGHWAY`), the average speed, and the number of routes using that edge (`INTENSITEI`).
 
 ```{r}
 edges
 ```
->>>>>>> 24d593657a2a56234e4b2607ade5b8897f2c76f1
-
