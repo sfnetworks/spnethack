@@ -1,5 +1,5 @@
 ---
-output: md_document
+output: html_document
 title: "Spatial networks in R with sf and tidygraph"
 ---
 
@@ -45,9 +45,12 @@ The `sf` class subclasses a `data.frame`, and the tidygraph package has a specif
 (edges <- edges[, c(2, 3, 1, c(4:ncol(edges)))])
 ```
 
-```{r, eval = FALSE}
+```{r, error = TRUE}
 # Construct a tbl_graph
 graph <- tbl_graph(nodes = nodes, edges = edges)
 ```
 
-Oops, something seems to go wrong! 
+Oops, something seems to go wrong! Inside the tbl_graph function, the first two columns of the edges data frame are converted into a matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside tbl_graph has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame`, or `tibble`, before we can construct a `tbl_graph`.
+
+```{r}
+graph <- tbl_graph(nodes = nodes, edges = as.data.frame(edges))
