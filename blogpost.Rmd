@@ -3,11 +3,39 @@ output: html_document
 title: "Spatial networks in R with sf and tidygraph"
 ---
 
-The R community can lean on very powerful packages for spatial vector data analysis ([sf](https://github.com/r-spatial/sf)) and network analysis ([tidygraph](https://github.com/thomasp85/tidygraph)), that both support the popular 'tidy' approach to data science. In sf, spatial vector data are stored as objects of class `sf`, which are flat tables with a list column that contains the geometry of the features. Tidygraph is build on top of the widely-used [igraph](https://github.com/igraph/igraph) package, and stores networks in objects of class `tbl_graph`. A `tbl_graph` is an igraph-object, but enables the user to manipulate both the edges and nodes elements as being flat tables.
+# Introduction
 
-Despite the existence of sf and tidygraph, R seems to lack a general, modern way to store networks whose nodes are embedded in space, i.e. spatial networks. The [stplanr](https://github.com/ropensci/stplanr) package contains the `SpatialLinesNetwork` class. This, however, is based on [sp](https://github.com/edzer/sp/), a package for spatial data analysis launched in 2005, that is used less since sf entered the stage. The same yields for [spnetwork](https://github.com/edzer/spnetwork), a package that combined sp and igraph. More recently, [dodgr](https://github.com/ATFutures/dodgr) was created. This package provides very fast analytical tools for spatial networks, but deals solely with dual-weighted directed graphs, mainly used for calculating shortest paths in street networks.
+<!-- Introduce the topic. Why would you want a spatial network... -->
+
+# Existing R packages for spatial networks
+
+Although R was originally designed as a language for statistical computing, an active 'R-spatial' ecosystem has evolved.
+Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf) (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial) of Geocomputation with R for a brief history).
+Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph), based on lower level libraries such as igraph.
+
+Both sf and tidygraph support the the `tibble` class and the broader 'tidy' approach to 'data science', which involves data processing pipelines, type stability and a convention of representing everything as a data frame (well a `tibble`, which is a data frame with user friendly default settings).
+In sf, this means storing spatial vector data as objects of class `sf`, which are essentially the same as a regular data frame (or tibble), but with an additional 'sticky' list column containing a geometry for each feature (row), and attributes such as bounding box and CRS.
+Tidygraph is build on top of the widely-used [igraph](https://github.com/igraph/igraph) package, and stores networks in objects of class `tbl_graph`. A `tbl_graph` is an igraph-object, but enables the user to manipulate both the edges and nodes elements as if they were data frames also.
+
+Both sf and tidygraph are relatively new packages (first released on CRAN in 2016 and 2017, respectively).
+It is unsurprising, therefore, that they have yet to be combined to allow a hybrid, tibble-based representation of graphs, the nodes of which are embedded in space, i.e. spatial networks.
+A number of approaches have been developed for representing spatial networks, and some of these are in packages that have been published on CRAN. [stplanr](https://github.com/ropensci/stplanr), for instance, contains the `SpatialLinesNetwork` class, which works with both [sp](https://github.com/edzer/sp/) (a package for spatial data analysis launched in 2005) and sf packages.
+[dodgr](https://github.com/ATFutures/dodgr) is a more recent package that provides analytical tools for spatial networks, with a focus on directed graphs (that can have direction-dependent weights, e.g. representing a one-way street).
+Other packages seeking to implement spatial networks in R include [spnetwork](https://github.com/edzer/spnetwork), a package that defined a class system combining sp and igraph, and [sfnetworks](https://github.com/luukvdmeer/sfnetworks), which combines sf and igraph objects using a tidyverse-orientated approach.
 
 This blogpost presents, with help of two examples, a general approach to store spatial networks in a tidy way by combining sf and tidygraph. Along the way, we will see that there is still a way to make this approach clear, convenient and efficient.
+
+# Set-up
+
+<!-- Setup code, including install packages, here. -->
+
+```{r}
+# cran_pkgs = c(
+#   "piggyback",
+#   "..."
+# )
+```
+
 
 ## Example 1: Fietstelweek
 
