@@ -21,14 +21,21 @@ The goal of spnethack is to explore spatial networks in R.
 We'll use the following packages:
 
 ```{r, eval=TRUE, message=FALSE}
-library(sf)
-library(osmdata)
-library(dodgr)
-library(stplanr)
-library(dplyr)
-library(piggyback)
-library(tidygraph)
-library(sfnetworks)
+cran_pkgs = c(
+  "sf",
+  "osmdata",
+  "dodgr",
+  "stplanr",
+  "dplyr",
+  "piggyback",
+  "tidygraph"
+)
+github_pkgs = c(
+  "luukvdmeer/sfnetworks"
+)
+remotes::install_cran(cran_pkgs)
+remotes::install_github(github_pkgs)
+purrr::map_lgl(c(cran_pkgs), require, character.only = TRUE)
 ```
 
 

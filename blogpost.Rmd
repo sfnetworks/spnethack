@@ -27,19 +27,35 @@ This blogpost presents, with help of two examples, a general approach to store s
 
 # Set-up
 
-<!-- Setup code, including install packages, here. -->
+The following code chunk will install the packages used in this article:
 
-```{r}
-# cran_pkgs = c(
-#   "piggyback",
-#   "..."
-# )
+```{r, eval=TRUE, message=FALSE}
+# we'll use remotes to install packages, install it if needs be:
+if(!"remotes" %in% installed.packages()) {
+  install.packages("remotes")
+}
+
+cran_pkgs = c(
+  "sf",
+  "osmdata",
+  "dodgr",
+  "stplanr",
+  "dplyr",
+  "piggyback",
+  "tidygraph"
+)
+
+github_pkgs = c("luukvdmeer/sfnetworks")
+
+remotes::install_cran(cran_pkgs)
+remotes::install_github(github_pkgs)
 ```
 
 
 ## Example 1: Fietstelweek
 
-Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data on what routes cyclists take to get from their origins to their destinations. The data were collected between September 14th and 20th in 2015, and between September 19th and 25th in 2016, through a mobile app which makes use of the cellphone GPS to track the trips. Around 50 thousand people participated. The data are available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download, and include seperate spatial files for edges and nodes.
+Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data on the routes that people cycle from origins to destinations. The data were collected between September 14th and 20th in 2015, and between September 19th and 25th in 2016, through a mobile app which uses smartphone GPS to track the trips. Around 50 thousand people participated. The data are available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download.
+Seperate spatial files provide for edges and nodes of the cycled network.
 
 To illustrate how such a spatial network could be stored in R, we use the Fietstelweek data for the municipality of Groningen as an example. The data has some flaws in the form of negative node indices in the edges frame, which we need to remove first.
 
@@ -78,7 +94,9 @@ edges
 qtm(st_geometry(edges))
 ```
 
-The `sf` class subclasses a `data.frame`, and the tidygraph package has a specific function to create a `tbl_graph` object from two data frames, where one contains the nodes and the other the edges. That is, we can easily construct a `tbl_graph` from the two `sf` objects that we created above. Regarding the edges data frame, it is important that the columns that specify the ID's of the source an target node are either the first two columns of the data frame, or are named 'to' and 'from', respectively. Both may be inconvenient and even unwanted, but for now, it unfortunately is the only way.
+The `sf` class builds on the `data.frame` and the tidygraph package has a specific function to create a `tbl_graph` object from two data frames, where one contains the nodes and the other the edges. That means we can construct a `tbl_graph` from the two `sf` objects that we created above. Regarding the edges, it is important that the ID columns representing origin and destination nodes are either the first two columns of the data frame, or are named 'to' and 'from', respectively.
+<!-- I don't think it's inconvenient (RL) -->
+<!-- Both may be inconvenient and even unwanted, but for now, it unfortunately is the only way.  -->
 
 ```{r, message = FALSE, warning = FALSE}
 edges <- edges %>% select(SOURCE, TARGET, LINKNUMMER, everything())
@@ -97,12 +115,13 @@ Oops, something seems to go wrong! Inside the tbl_graph function, the first two 
 graph <- tbl_graph(nodes = nodes, edges = as_tibble(edges))
 ``` 
 
-It seems like the street network of a medium sized city (Groningen has 230.000 inhabitants) is already too large for tidygraph to work with, which seems to be caused by the underlying igraph package. This is very inconvenient, since a lot op spatial network will even be considerably larger than that.
+It seems like the street network of a medium sized city (Groningen has 230.000 inhabitants) is already too large for tidygraph to work with, which seems to be caused by the underlying igraph package. This is very inconvenient, since many spatial networks will even be considerably larger than that.
 
 For now, let's take a subset of the original network, just to show how things could work when the memory limit was not there. 
 
 ```{r, warning = FALSE}
-selection = (st_bbox(edges) + c(7000, 4000, 7000, 4000)) %>%
+bounds = st_bbox(edges) + c(7000, 4000, 7000, 4000)
+selection =  %>% bounds
   st_as_sfc()
 
 edges = st_intersection(edges, selection)
