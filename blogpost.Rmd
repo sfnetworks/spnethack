@@ -29,7 +29,7 @@ This blogpost presents, with help of two examples, a general approach to store s
 
 The following code chunk will install the packages used in this article:
 
-```{r, eval=TRUE, message=FALSE}
+```{r, eval=FALSE, message=FALSE}
 # we'll use remotes to install packages, install it if needs be:
 if(!"remotes" %in% installed.packages()) {
   install.packages("remotes")
@@ -121,7 +121,7 @@ For now, let's take a subset of the original network, just to show how things co
 
 ```{r, warning = FALSE}
 bounds = st_bbox(edges) + c(7000, 4000, 7000, 4000)
-selection =  %>% bounds
+selection =  bounds %>%
   st_as_sfc()
 
 edges = st_intersection(edges, selection)
