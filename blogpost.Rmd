@@ -3,11 +3,11 @@ output: html_document
 title: "Spatial networks in R with sf and tidygraph"
 ---
 
-# Introduction
+## Introduction
 
 <!-- Introduce the topic. Why would you want a spatial network... -->
 
-# Existing R packages for spatial networks
+## Existing R packages for spatial networks
 
 Although R was originally designed as a language for statistical computing, an active 'R-spatial' ecosystem has evolved.
 Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf) (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial) of Geocomputation with R for a brief history).
@@ -25,7 +25,7 @@ Other packages seeking to implement spatial networks in R include [spnetwork](ht
 
 This blogpost presents, with help of two examples, a general approach to store spatial networks in a tidy way by combining sf and tidygraph. Along the way, we will see that there is still a way to make this approach clear, convenient and efficient.
 
-# Set-up
+## Set-up
 
 The following code chunk will install the packages used in this article:
 
@@ -51,211 +51,108 @@ remotes::install_cran(cran_pkgs)
 remotes::install_github(github_pkgs)
 ```
 
-
-## Example 1: Fietstelweek
-
-Fietstelweek is, translated from Dutch, the National Bicycle Count week. It is a crowdsourced initiative to collect data on the routes that people cycle from origins to destinations. The data were collected between September 14th and 20th in 2015, and between September 19th and 25th in 2016, through a mobile app which uses smartphone GPS to track the trips. Around 50 thousand people participated. The data are available on [bikeprint.nl](http://www.bikeprint.nl/fietstelweek/) for download.
-Seperate spatial files provide for edges and nodes of the cycled network.
-
-To illustrate how such a spatial network could be stored in R, we use the Fietstelweek data for the municipality of Groningen as an example. The data has some flaws in the form of negative node indices in the edges frame, which we need to remove first.
-
-```{r, results = FALSE, message = FALSE, warning = FALSE}
-library(piggyback)
+```{r, warning = FALSE, message = FALSE}
 library(sf)
-library(tidyverse)
-
-pb_download("groningen_edges.gpkg")
-pb_download("groningen_nodes.gpkg")
-
-edges <- st_read("groningen_edges.gpkg") %>% 
-  filter(SOURCE > 0 & TARGET > 0)
-nodes <- st_read("groningen_nodes.gpkg")
+library(tidygraph)
+library(dplyr)
+library(tibble)
+library(ggplot2)
 ```
 
-Each node has a `POINT` geometry and several attributes: a unique ID (`KNOOPNUMME`), the average waiting time at the node (`TIJD`), and the number of routes that passed the node (`AANTAL`). 
+## From sf to tbl_graph: a step wise approach
+...
+
+### Step 1: Load data
+As an example, we use the street network of the city center of Münster, Germany. It is loaded as an object of class `sf`, and contains only `LINESTRING` geometries, without any additional variables.
+
+```{r, results = FALSE, warning = FALSE, message = FALSE}
+piggyback::pb_download('muenster-center.geojson')
+muenster_center <- read_sf('muenster-center.geojson')
+```
+
+```{r, cache = TRUE}
+muenster_center
+ggplot(data = muenster_center) + geom_sf()
+```
+
+### Step 2: Give each edge an unique index
+The edges of the network, are simply the linestrings in the data. Each of them gets an unique index, which can be later be related to their start and end node.
 
 ```{r}
-nodes
-```
+edges <- muenster_center %>%
+  mutate(edgeID = c(1:n()))
 
-```{r, message = FALSE, fig.width = 9}
-library(tmap)
-tmap_mode('view')
-qtm(st_geometry(nodes))
-```
-
-Each edge has a `MULTILINESTRING` geometry and several attributes: a unique ID (`LINKNUMMER`), the ID's of the source and target nodes, the functional type of the edge (`HIGHWAY`), the average speed, and the number of routes using that edge (`INTENSITEI`).
-
-```{r}
 edges
 ```
 
-```{r, fig.width = 9}
-qtm(st_geometry(edges))
-```
-
-The `sf` class builds on the `data.frame` and the tidygraph package has a specific function to create a `tbl_graph` object from two data frames, where one contains the nodes and the other the edges. That means we can construct a `tbl_graph` from the two `sf` objects that we created above. Regarding the edges, it is important that the ID columns representing origin and destination nodes are either the first two columns of the data frame, or are named 'to' and 'from', respectively.
-<!-- I don't think it's inconvenient (RL) -->
-<!-- Both may be inconvenient and even unwanted, but for now, it unfortunately is the only way.  -->
-
-```{r, message = FALSE, warning = FALSE}
-edges <- edges %>% select(SOURCE, TARGET, LINKNUMMER, everything())
-colnames(edges)
-```
-
-```{r, error = TRUE, message = FALSE, warning = FALSE}
-library(tidygraph)
-
-graph <- tbl_graph(nodes = nodes, edges = edges)
-```
-
-Oops, something seems to go wrong! Inside the tbl_graph function, the first two columns of the edges data frame are converted into a matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside tbl_graph has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame` - or, to keep it tidy, a `tibble` - before we can construct a `tbl_graph`.
-
-```{r, error = TRUE}
-graph <- tbl_graph(nodes = nodes, edges = as_tibble(edges))
-``` 
-
-It seems like the street network of a medium sized city (Groningen has 230.000 inhabitants) is already too large for tidygraph to work with, which seems to be caused by the underlying igraph package. This is very inconvenient, since many spatial networks will even be considerably larger than that.
-
-For now, let's take a subset of the original network, just to show how things could work when the memory limit was not there. 
-
-```{r, warning = FALSE}
-bounds = st_bbox(edges) + c(7000, 4000, 7000, 4000)
-selection =  bounds %>%
-  st_as_sfc()
-
-edges = st_intersection(edges, selection)
-nodes = nodes %>%
-  filter(KNOOPNUMME %in% c(edges$SOURCE, edges$TARGET))
-```
-
-```{r, fig.width = 9}
-qtm(st_geometry(edges))
-```
-
-*(to be continued..)*
-
-## Example 2: Australian Electricity Transmission Lines
-
-The Fietstelweek data is easy in a way, since the data already come in a network structure, with edges and nodes. Let's look at another example, where we start with only a set of lines: the electricity transmission lines in Australia.
-
-```{r, results = FALSE, message = FALSE, warning = FALSE}
-pb_download("etl_aus.geojson")
-```
-
-```{r, results = FALSE, message = FALSE, warning = FALSE}
-etl <- st_read("etl_aus.geojson") %>% select(Name)
-```
+### Step 3: Create nodes at the start and end point of each edge
+The nodes of the network, are the start and end points of the edges. The locations of these points can be derived by using the `st_coordinates` function in sf. When given a set of linestrings, this function breaks down each of them into the points they are build up. It returns a matrix with the X and Y coordinates of those points, and additionally an integer indicator L1 specifying to which line a point belongs. These integer indicators correspond to the edge indices defined in step 2. That is, if we convert the matrix into a `data.frame` or `tibble`, group the features by the edge index, and only keep the first and last feature of each group, we have the start and end points of the linestrings.
 
 ```{r}
-etl
+nodes <- edges %>%
+  st_coordinates() %>%
+  as_tibble() %>%
+  rename(edgeID = L1) %>%
+  group_by(edgeID) %>%
+  slice(c(1, n())) %>%
+  ungroup() %>%
+  mutate(start_end = rep(c('start', 'end'), times = n()/2))
+
+nodes
 ```
 
-```{r, fig.width = 9}
-qtm(etl)
-```
-
-The lines correspond to the edges, but the nodes are not present. We have to calculate them, in a way that the start and end points of the lines are the nodes of the network. Note here that Start and/or end points might be shared by multiple lines, which should result in only one node. We can write a helper function to do this complete task:
+### Step 4: Give each node an unique index
+Each of the nodes in the network needs to get an unique index, such that they can be related to the edges. However, we need to take into account that edges can share either startpoints and/or endpoints. Such duplicated points, that have the same X and Y coordinate, are one single node, and should therefore get the same index.
 
 ```{r}
-line2network <- function(x) {
-  # The edges of the network are simply the linestrings from the sf object
-  edges <- x
+node_indices <- nodes %>%
+  group_by(X, Y) %>%
+  group_indices()
 
-  # Add a unique ID to each edge
-  edges <- edges %>%
-    mutate(edgeID = c(1:n()))
-  
-  # The nodes are the startpoints and endpoints of the linestrings
-  # The function st_coordinates gets the coordinates of all the points of a line
-  # The column L1 specifies to which line a set of point coordinates belongs
-  # Filter start and endpoints by grouping by L1 and selecting first and last entry of each group
-  # Then, assign a value of 0 to startpoints (source) and 1 to endpoints (target)
-  nodes <- x %>%
-    st_coordinates() %>%
-    as.data.frame() %>%
-    group_by(L1) %>%
-    slice(c(1, n())) %>%
-    ungroup() %>%
-    mutate(startend = rep(c(0, 1), times = n()/2))
-  
-  # If lines share startpoint and/or endpoint, this point should be one single node
-  # That is, duplicated points in the nodes data should have the same unique node ID
-  # For this, group the nodes data by the combination (X, Y)
-  # Then, retrieve group indices, that form unique IDs for each node
-  node_ids <- nodes %>%
-    group_by(X, Y) %>%
-    group_indices()
-  
-  # Add this unique node ID as a column to the nodes data
-  nodes <- nodes %>%
-    mutate(nodeID = node_ids)
-  
-  # Add two columns to the edges data
-  # One column represents the unique node ID of the startnode (source) of each edge
-  # The other column represents the unique node ID of the endnode (target) of each edge
-  sources <- nodes %>%
-    filter(startend == 0) %>%
-    pull(nodeID)
-  
-  targets <- nodes %>%
-    filter(startend == 1) %>%
-    pull(nodeID)
-  
-  edges <- edges %>%
-    mutate(nodeID_source = sources, nodeID_target = targets)
-  
-  # The source and target node IDs are added to the edges data
-  # Now, duplicate points can be removed from the nodes data
-  # That is, each node will only occur once in the nodes data
-  # Then, columns L1 and startend are not appropriate anymore and should be removed
-  # Finally, convert the nodes data into an sf object with point geometry
-  # The CRS of the nodes sf object should be the same as of the inputted sf object
-  nodes <- nodes %>%
-    distinct(nodeID, .keep_all = TRUE) %>%
-    select(-c(L1, startend)) %>%
-    as.data.frame() %>%
-    st_as_sf(coords = c("X", "Y")) %>%
-    st_set_crs(st_crs(x))
-  
-  # Output a list with the two sf data frames
-  network <- list(edges, nodes)
-  setNames(network, c('edges','nodes'))
-}
+nodes <- nodes %>%
+  mutate(nodeID = node_indices)
+
+nodes
 ```
 
-And then convert the data into a list of edges and nodes:
+### Step 5: Combine the node indices with the edges
+Now each of the start and endpoints from step has been assigned a node ID in step 4, we can add the node indices to the edges. In other words, we can specify for each edge, in which node it starts, and in which node it ends.
 
 ```{r}
-etl_network <- line2network(etl)
-etl_network
+source_nodes <- nodes %>%
+  filter(start_end == 'start') %>%
+  pull(nodeID)
+
+target_nodes <- nodes %>%
+  filter(start_end == 'end') %>%
+  pull(nodeID)
+
+edges = edges %>%
+  mutate(from = source_nodes, to = target_nodes)
+
+edges
 ```
+
+### Step 6: Remove duplicate nodes
+Having added the unique node ID's to the edges data, we don't need the duplicated start and endpoints anymore. After removing them, we end up with a `tibble` in which each row represents a unique, single node. This tibble can be converted into an `sf` object, with `POINT` geometries.
 
 ```{r}
-tm_shape(st_zm(etl_network$edges, drop = T)) +
-  tm_lines() +
-tm_shape(etl_network$nodes) +
-  tm_dots()
+nodes <- nodes %>%
+  distinct(nodeID, .keep_all = TRUE) %>%
+  select(-c(edgeID, start_end)) %>%
+  st_as_sf(coords = c('X', 'Y')) %>%
+  st_set_crs(st_crs(edges))
+
+nodes
 ```
 
-We can even see on the Name attribute that there is some sort of origin and destination: `Penrith to Warrimoo`, where Penrith would correspond to node 8 and Warrimo to node 11. 
+### Step 7: Convert to tbl_graph
+The first six steps led to one `sf` object with `LINESTRING` geometries, representing the edges of the network, and one `sf` object with `POINT` geometries, representing the nodes of the network. The `tbl_graph` function allows us to convert these two into a `tbl_graph` object. There are two tricky parts in this step that need to be highlighted. One, is that the columns containing the indices of the source and target nodes should either be the first two columns of the `sf` object, or be named 'to' and 'from', respectively. Secondly, inside the `tbl_graph` function, these columns are converted into a two-column matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside `tbl_graph` has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame` or `tibble`, before we can construct a `tbl_graph`. In the end, this doesn't matter, since both the nodes and edges will be 'integrated' into an `igraph` structure, and loose their specific `sf` characteristics.
 
 ```{r}
-# # Getting the Sidney outline from OSM
-# library(osmdata)
-# sidneybb <- getbb('Sidney, Australia', format_out = 'sf_polygon')
-# 
-# # Intersecting the national ETL data to Sidney
-# etl_sidney <- etl_aus[sidneybb, op = st_intersects]
+graph = tbl_graph(nodes = nodes, edges = as_tibble(edges))
+
+graph
 ```
 
-```{r}
-# tm_shape(sidneybb) +
-#   tm_borders(col = 'red') +
-#   tm_shape(st_zm(etl_net$edges, drop = T)) +
-#   tm_lines(col = 'grey30') +
-#   tm_shape(etl_net$nodes) +
-#   tm_dots(col = 'orange')
-```
-
-*(to be continued..)*
+## Combining the best of both worlds
