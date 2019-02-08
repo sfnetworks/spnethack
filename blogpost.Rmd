@@ -5,6 +5,12 @@ title: "Spatial networks in R with sf and tidygraph"
 
 # Introduction
 
+Mobility networks, electrical and telecommunication lines, rivers, these are all examples of spatial networks, that is, organized systems of nodes and edges embedded in space. Most of these networks are associated to a set of coordinates in the 'real' world, therefore to an actual geographical location. 
+
+Even if several approaches have been already developed to deal with graph representations of spatial networks, where a wide set of measures and computations can be developed through basic Graph Theory concepts, the spatial network on itself, loses its geographical properties when converted into a graph. 
+
+Hence, a combination of both the geographical and graph components of such networks are presented on this blogpost.
+
 <!-- Introduce the topic. Why would you want a spatial network... -->
 
 # Existing R packages for spatial networks
