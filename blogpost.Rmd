@@ -60,10 +60,7 @@ library(ggplot2)
 ```
 
 ## From sf to tbl_graph: a step wise approach
-...
-
-### Step 1: Load data
-As an example, we use the street network of the city center of Münster, Germany. It is loaded as an object of class `sf`, and contains only `LINESTRING` geometries, without any additional variables.
+As an example, we use the street network of the city center of Münster, Germany. It is loaded as an object of class `sf`, and contains only `LINESTRING` geometries, without any additional variables. The same steps, however, can be used for `sf` objects that contain any number of additional variables.
 
 ```{r, results = FALSE, warning = FALSE, message = FALSE}
 piggyback::pb_download('muenster-center.geojson')
@@ -75,7 +72,7 @@ muenster_center
 ggplot(data = muenster_center) + geom_sf()
 ```
 
-### Step 2: Give each edge an unique index
+### Step 1: Give each edge an unique index
 The edges of the network, are simply the linestrings in the data. Each of them gets an unique index, which can be later be related to their start and end node.
 
 ```{r}
@@ -85,8 +82,8 @@ edges <- muenster_center %>%
 edges
 ```
 
-### Step 3: Create nodes at the start and end point of each edge
-The nodes of the network, are the start and end points of the edges. The locations of these points can be derived by using the `st_coordinates` function in sf. When given a set of linestrings, this function breaks down each of them into the points they are build up. It returns a matrix with the X and Y coordinates of those points, and additionally an integer indicator L1 specifying to which line a point belongs. These integer indicators correspond to the edge indices defined in step 2. That is, if we convert the matrix into a `data.frame` or `tibble`, group the features by the edge index, and only keep the first and last feature of each group, we have the start and end points of the linestrings.
+### Step 2: Create nodes at the start and end point of each edge
+The nodes of the network, are the start and end points of the edges. The locations of these points can be derived by using the `st_coordinates` function in sf. When given a set of linestrings, this function breaks down each of them into the points they are build up. It returns a matrix with the X and Y coordinates of those points, and additionally an integer indicator L1 specifying to which line a point belongs. These integer indicators correspond to the edge indices defined in step 1. That is, if we convert the matrix into a `data.frame` or `tibble`, group the features by the edge index, and only keep the first and last feature of each group, we have the start and end points of the linestrings.
 
 ```{r}
 nodes <- edges %>%
@@ -101,8 +98,8 @@ nodes <- edges %>%
 nodes
 ```
 
-### Step 4: Give each node an unique index
-Each of the nodes in the network needs to get an unique index, such that they can be related to the edges. However, we need to take into account that edges can share either startpoints and/or endpoints. Such duplicated points, that have the same X and Y coordinate, are one single node, and should therefore get the same index.
+### Step 3: Give each node an unique index
+Each of the nodes in the network needs to get an unique index, such that they can be related to the edges. However, we need to take into account that edges can share either startpoints and/or endpoints. Such duplicated points, that have the same X and Y coordinate, are one single node, and should therefore get the same index. Note that the coordinate values as displayed in the tibble are rounded, and may look the same for several rows, even when they are not.
 
 ```{r}
 node_indices <- nodes %>%
@@ -115,8 +112,8 @@ nodes <- nodes %>%
 nodes
 ```
 
-### Step 5: Combine the node indices with the edges
-Now each of the start and endpoints from step has been assigned a node ID in step 4, we can add the node indices to the edges. In other words, we can specify for each edge, in which node it starts, and in which node it ends.
+### Step 4: Combine the node indices with the edges
+Now each of the start and endpoints from step has been assigned a node ID in step 3, we can add the node indices to the edges. In other words, we can specify for each edge, in which node it starts, and in which node it ends.
 
 ```{r}
 source_nodes <- nodes %>%
@@ -133,7 +130,7 @@ edges = edges %>%
 edges
 ```
 
-### Step 6: Remove duplicate nodes
+### Step 5: Remove duplicate nodes
 Having added the unique node ID's to the edges data, we don't need the duplicated start and endpoints anymore. After removing them, we end up with a `tibble` in which each row represents a unique, single node. This tibble can be converted into an `sf` object, with `POINT` geometries.
 
 ```{r}
@@ -146,8 +143,8 @@ nodes <- nodes %>%
 nodes
 ```
 
-### Step 7: Convert to tbl_graph
-The first six steps led to one `sf` object with `LINESTRING` geometries, representing the edges of the network, and one `sf` object with `POINT` geometries, representing the nodes of the network. The `tbl_graph` function allows us to convert these two into a `tbl_graph` object. There are two tricky parts in this step that need to be highlighted. One, is that the columns containing the indices of the source and target nodes should either be the first two columns of the `sf` object, or be named 'to' and 'from', respectively. Secondly, inside the `tbl_graph` function, these columns are converted into a two-column matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside `tbl_graph` has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame` or `tibble`, before we can construct a `tbl_graph`. In the end, this doesn't matter, since both the nodes and edges will be 'integrated' into an `igraph` structure, and loose their specific `sf` characteristics.
+### Step 6: Convert to tbl_graph
+The first five steps led to one `sf` object with `LINESTRING` geometries, representing the edges of the network, and one `sf` object with `POINT` geometries, representing the nodes of the network. The `tbl_graph` function allows us to convert these two into a `tbl_graph` object. There are two tricky parts in this step that need to be highlighted. One, is that the columns containing the indices of the source and target nodes should either be the first two columns of the `sf` object, or be named 'to' and 'from', respectively. Secondly, inside the `tbl_graph` function, these columns are converted into a two-column matrix. However, an `sf` object has a so-called 'sticky geometry', which means that the geometry column sticks to the attributes whenever specific columns are selected. Therefore, the matrix created inside `tbl_graph` has three columns instead of two, and that causes an error. Therefore, we first need to convert the `sf` object to a regular `data.frame` or `tibble`, before we can construct a `tbl_graph`. In the end, this doesn't matter, since both the nodes and edges will be 'integrated' into an `igraph` structure, and loose their specific `sf` characteristics.
 
 ```{r}
 graph = tbl_graph(nodes = nodes, edges = as_tibble(edges))
@@ -155,4 +152,84 @@ graph = tbl_graph(nodes = nodes, edges = as_tibble(edges))
 graph
 ```
 
+### Step 8: Putting it together
+For make the approach more convenient, we can combine all steps above into a single function, that takes an `sf` object with `LINESTRING` geometries as input, and returns a spatial `tbl_graph`.
+
+```{r}
+sf_to_tidygraph = function(x) {
+  
+  edges <- x %>%
+      mutate(edgeID = c(1:n()))
+  
+  nodes <- edges %>%
+      st_coordinates() %>%
+    as_tibble() %>%
+    rename(edgeID = L1) %>%
+    group_by(edgeID) %>%
+    slice(c(1, n())) %>%
+    ungroup() %>%
+    mutate(start_end = rep(c('start', 'end'), times = n()/2))
+  
+  node_indices <- nodes %>%
+    group_by(X, Y) %>%
+    group_indices()
+
+  nodes <- nodes %>%
+    mutate(nodeID = node_indices)
+  
+  source_nodes <- nodes %>%
+    filter(start_end == 'start') %>%
+    pull(nodeID)
+
+  target_nodes <- nodes %>%
+    filter(start_end == 'end') %>%
+    pull(nodeID)
+
+  edges = edges %>%
+    mutate(from = source_nodes, to = target_nodes)
+  
+  nodes <- nodes %>%
+    distinct(nodeID, .keep_all = TRUE) %>%
+    select(-c(edgeID, start_end)) %>%
+    st_as_sf(coords = c('X', 'Y')) %>%
+    st_set_crs(st_crs(edges))
+  
+  tbl_graph(nodes = nodes, edges = as_tibble(edges))
+  
+}
+
+sf_to_tidygraph(muenster_center)
+```
+
 ## Combining the best of both worlds
+Having the data stored in the tbl_graph structure, with a geometry list column for both the edges and nodes, enables us to combine the wide range of functionalities in sf and tidygraph, in a way that fits neatly into the tidyverse.
+
+With the `activate()` verb, we specify if we want to manipulate the edges or the nodes. Then, most dplyr verbs can be used in the familiar way, also when directly applied to the geometry list column. For example, we can add a variable describing the length of each edge, which, later, we use as a weight for the edges.
+
+```{r}
+graph <- graph %>%
+  activate(edges) %>%
+  mutate(length = st_length(geometry))
+
+graph
+```
+
+With one flow of pipes, we can 'escape' the graph structure, and turn either the edges and nodes back into real `sf` objects, and, for example, summarise the data based on a specific variable.
+
+```{r}
+graph %>%
+  activate(edges) %>%
+  st_as_sf()
+```
+
+### Plotting
+```{r, cache = TRUE}
+ggplot() +
+  geom_sf(
+    data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()
+  ) +
+  geom_sf(
+    data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(),
+    size = 0.5
+  )
+```
