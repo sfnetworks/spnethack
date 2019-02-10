@@ -5,7 +5,7 @@ title: "Spatial networks in R with sf and tidygraph"
 
 ## Introduction
 
-Street networks, shipping routes, telecommunication lines, river bassins. All examples of spatial networks: organized systems of nodes and edges embedded in space. For most them, these nodes and edges can be associated with geographical coordinates. That is, the nodes are geographical points, and the edges geographical lines. 
+Street networks, shipping routes, telecommunication lines, river bassins. All examples of spatial networks: organized systems of nodes and edges embedded in space. For most of them, these nodes and edges can be associated with geographical coordinates. That is, the nodes are geographical points, and the edges geographical lines. 
 
 Such spatial networks can be analyzed using graph theory. Not for nothing, Leonhard Eulers famous work on the [Seven Bridges of Köningsberg](https://www.mathsisfun.com/activity/seven-bridges-konigsberg.html), which laid the foundations of graph theory and network analysis, was in essence a spatial problem.
 
@@ -69,12 +69,19 @@ library(ggplot2)
 library(units)
 ```
 
-## From sf to tbl_graph: a step wise approach
-As an example, we use the street network of the city center of Münster, Germany. It is loaded as an object of class `sf`, and contains only `LINESTRING` geometries, without only one additional variable. The same steps, however, can be used for `sf` objects that contain any number of additional variables.
+## Getting the data 
+As an example, we use the street network of the city center of Münster, Germany. We will get the data from OpenStreetMap. Packages like `dodgr` have optimized their code for such data, however considering that we want to showcase this workflow for any source of data, we will generate an object of class `sf` containing only `LINESTRING` geometries. One additional variable, the type of street, is added to show that the same steps can be used for `sf` objects that contain any number of additional variables.
 
-```{r, results = FALSE, warning = FALSE, message = FALSE}
-piggyback::pb_download('muenster-center.geojson')
-muenster_center <- read_sf('muenster-center.geojson')
+```{r}
+library(osmdata)
+
+muenster <- opq(bbox =  c(7.61, 51.954, 7.636, 51.968)) %>% 
+  add_osm_feature(key = 'highway') %>% 
+  osmdata_sf() %>% 
+  osm_poly2line()
+
+muenster_center <- muenster$osm_lines %>% 
+  select(highway)
 ```
 
 ```{r}
@@ -84,6 +91,8 @@ muenster_center
 ```{r, cache = TRUE}
 ggplot(data = muenster_center) + geom_sf()
 ```
+
+## From sf to tbl_graph: a step wise approach
 
 ### Step 1: Clean the network
 To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html) toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html) and [link2GI](https://github.com/r-spatial/link2GI) packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of Geocomputation with R. Take into account that the linking process may take up some time, especially on windows operating systems.
@@ -382,9 +391,9 @@ ggplot() +
 
 However, often we will be interested in shortest paths between geographical points that are not necessarily nodes in the network. For example, we might want to calculate the shortest path from the railway station of Münster to the cathedral. For this purpose, the dodgr package, designed with a focus on routing in street networks, comes in handy. If we provide it the network, and the coordinates of the desired from and two points as two-column matrices, it will find the network points closest to the given locations, and calculate the shortest paths. In computing time, dodgr even outperforms igraph. 
 
-However, dodgr does not work with sf-like geometry list columns (yet?). Instead, it assumes the graph to be a single data.frame, or similar object, containing the longitudes and latitudes of the from and to nodes in distinct columns. Also, the distance column should be named `dist`, and not `length`.Therefore, we need to take some pre-processing steps before we can use dodgr. Again, we will show an example of a shortest path from one location to another, but it is just as well possible to do the same for one to many, many to one, or many to many locations.
+However, dodgr does not work with sf-like geometry list columns (yet?). Instead, it assumes the graph to be a single data.frame, or similar object, containing the longitudes and latitudes of the from and to nodes in distinct columns. Also, the distance column should be a numeric column called `dist`, and not a `units` class called `length`. Therefore, we need to take some pre-processing steps before we can use dodgr. Again, we will show an example of a shortest path from one location to another, but it is just as well possible to do the same for one to many, many to one, or many to many locations.
 
-```{r}
+```{r, results='asis'}
 library(dodgr)
 
 node_coordinates <- graph %>%
@@ -398,14 +407,17 @@ node_coordinates <- graph %>%
 dodgr_graph <- graph %>%
   activate(edges) %>%
   as_tibble() %>%
-  rename(dist = length, edge_id = edgeID) %>%
+  mutate(dist = as.numeric(length)) %>% 
+  rename(edge_id = edgeID) %>%
   left_join(node_coordinates, by = c('from' = 'nodeID')) %>%
   rename(from_id = from, from_lon = X, from_lat = Y) %>%
   left_join(node_coordinates, by = c('to' = 'nodeID')) %>%
   rename(to_id = to, to_lon = X, to_lat = Y) %>%
-  select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist)
+  select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist) %>% 
+  as.data.frame() %>% # a tibble is not recognized by dodgr
+  dodgr_components() # a requirement to for a dodgr_streetnet 
 
-dodgr_graph
+dodgr_graph %>% head(10) %>% knitr::kable()
 ```
 
 ```{r, error = TRUE}
@@ -419,7 +431,9 @@ muenster_cathedral
 
 path <- dodgr::dodgr_paths(
   graph = dodgr_graph,
-  from = muenster_station,
-  to = muenster_cathedral
+  from = muenster_cathedral,
+  to = muenster_station
 )
+
+path ## It works but just cannot find a path between the two points. Possibly has to do with the fact that the graph is undirected and dodgr only works with directed graphs. 
 ```
