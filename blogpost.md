@@ -17,17 +17,17 @@ essence a spatial problem.
 
 In R, there are advanced, modern tools for both the analysis of spatial
 data and networks. Furthermore, several packages have been developed
-that cover (parts of) spatial network analysis. However, as we learned
-from this [github issue](https://github.com/r-spatial/sf/issues/966) and
-this [tweet](https://twitter.com/zevross/status/1089908839816794118),
+that cover (parts of) spatial network analysis. As stated in this
+[github issue](https://github.com/r-spatial/sf/issues/966) and this
+[tweet](https://twitter.com/zevross/status/1089908839816794118),
 concensus on how best to represent and analyse spatial networks has
 proved elusive.
 
-Rhis blogpost takes a first step in this direction, demonstrating an
-approach that starts with a set of geographic lines, and leads to an
-object ready to be used for network analysis. Along the way, we will see
-that there are still steps to take before the process of analyzing
-spatial networks in R is clear, modern and efficient.
+This blogpost demonstrates an approach to spatial networks that starts
+with a set of geographic lines, and leads to an object ready to be used
+for network analysis. Along the way, we will see that there are still
+steps that need to be taken before the process of analyzing spatial
+networks in R is user friendly and efficient.
 
 ## Existing R packages for spatial networks
 
@@ -40,8 +40,8 @@ GEOS and PROJ, notably in the package
 [section 1.5](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial)
 of Geocomputation with R for a brief history). Likewise, a number of
 packages for graph representation and analysis have been developed,
-notably [tidygraph](https://github.com/thomasp85/tidygraph), based on
-lower level libraries such as [igraph](https://igraph.org/).
+notably [tidygraph](https://github.com/thomasp85/tidygraph), which is
+based on [igraph](https://igraph.org/).
 
 Both sf and tidygraph support the the `tibble` class and the broader
 ‘tidy’ approach to data science, which involves data processing
@@ -59,9 +59,11 @@ frames also.
 Both sf and tidygraph are relatively new packages (first released on
 CRAN in 2016 and 2017, respectively). It is unsurprising, therefore,
 that they have yet to be combined to allow a hybrid, tibble-based
-representation of spatial networks. Nevertheless, a number of other
-approaches have been developed for representing spatial networks, and
-some of these are in packages that have been published on CRAN.
+representation of spatial networks.
+
+Nevertheless, a number of approaches have been developed for
+representing spatial networks, and some of these are in packages that
+have been published on CRAN.
 [stplanr](https://github.com/ropensci/stplanr), for instance, contains
 the `SpatialLinesNetwork` class, which works with both the
 [sp](https://github.com/edzer/sp/) (a package for spatial data analysis
@@ -75,6 +77,11 @@ implement spatial networks in R include
 a class system combining sp and igraph, and
 [shp2graph](https://cran.r-project.org/web/packages/shp2graph/index.html),
 which provides tools to switch between sp and igraph objects.
+
+Each package has its merits that deserve to be explored in more detail
+(possibly in a subsequent blog post). The remainder of this post
+outlines an approach that combines `sf` and `igraph` objects in a
+`tidygraph` object.
 
 ## Set-up
 
@@ -147,7 +154,7 @@ muenster_center <- muenster$osm_lines %>%
 muenster_center
 ```
 
-    ## Simple feature collection with 2194 features and 1 field
+    ## Simple feature collection with 2191 features and 1 field
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -243,7 +250,7 @@ muenster_center <- readVECT('muenster_cleaned') %>%
 muenster_center
 ```
 
-    ## Simple feature collection with 4681 features and 1 field
+    ## Simple feature collection with 4673 features and 1 field
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -275,7 +282,7 @@ edges <- muenster_center %>%
 edges
 ```
 
-    ## Simple feature collection with 4681 features and 2 fields
+    ## Simple feature collection with 4673 features and 2 fields
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -320,7 +327,7 @@ nodes <- edges %>%
 nodes
 ```
 
-    ## # A tibble: 9,362 x 4
+    ## # A tibble: 9,346 x 4
     ##        X     Y edgeID start_end
     ##    <dbl> <dbl>  <dbl> <chr>    
     ##  1  7.63  52.0      1 start    
@@ -333,7 +340,7 @@ nodes
     ##  8  7.63  52.0      4 end      
     ##  9  7.63  52.0      5 start    
     ## 10  7.63  52.0      5 end      
-    ## # … with 9,352 more rows
+    ## # … with 9,336 more rows
 
 ### Step 4: Give each node an unique index
 
@@ -356,7 +363,7 @@ nodes <- nodes %>%
 nodes
 ```
 
-    ## # A tibble: 9,362 x 5
+    ## # A tibble: 9,346 x 5
     ##        X     Y edgeID start_end nodeID
     ##    <dbl> <dbl>  <dbl> <chr>      <int>
     ##  1  7.63  52.0      1 start          1
@@ -369,7 +376,7 @@ nodes
     ##  8  7.63  52.0      4 end            7
     ##  9  7.63  52.0      5 start          5
     ## 10  7.63  52.0      5 end            6
-    ## # … with 9,352 more rows
+    ## # … with 9,336 more rows
 
 ### Step 5: Combine the node indices with the edges
 
@@ -393,7 +400,7 @@ edges = edges %>%
 edges
 ```
 
-    ## Simple feature collection with 4681 features and 4 fields
+    ## Simple feature collection with 4673 features and 4 fields
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -477,9 +484,9 @@ graph = tbl_graph(nodes = nodes, edges = as_tibble(edges), directed = FALSE)
 graph
 ```
 
-    ## # A tbl_graph: 3322 nodes and 4681 edges
+    ## # A tbl_graph: 3322 nodes and 4673 edges
     ## #
-    ## # An undirected multigraph with 33 components
+    ## # An undirected multigraph with 37 components
     ## #
     ## # Node Data: 3,322 x 2 (active)
     ##   nodeID            geometry
@@ -492,13 +499,13 @@ graph
     ## 6      6 (7.625926 51.95595)
     ## # … with 3,316 more rows
     ## #
-    ## # Edge Data: 4,681 x 5
+    ## # Edge Data: 4,673 x 5
     ##    from    to highway                                       geometry edgeID
     ##   <int> <int> <fct>                                 <LINESTRING [°]>  <int>
     ## 1     1     2 primary         (7.625074 51.95564, 7.625275 51.95566)      1
     ## 2     1     3 primary (7.624554 51.95561, 7.624838 51.95562, 7.6249…      2
     ## 3     4     5 primary (7.626498 51.95617, 7.626437 51.95617, 7.6263…      3
-    ## # … with 4,678 more rows
+    ## # … with 4,670 more rows
 
 ### Step 8: Putting it together
 
@@ -548,9 +555,9 @@ sf_to_tidygraph = function(x, directed = TRUE) {
 sf_to_tidygraph(muenster_center, directed = FALSE)
 ```
 
-    ## # A tbl_graph: 3322 nodes and 4681 edges
+    ## # A tbl_graph: 3322 nodes and 4673 edges
     ## #
-    ## # An undirected multigraph with 33 components
+    ## # An undirected multigraph with 37 components
     ## #
     ## # Node Data: 3,322 x 2 (active)
     ##   nodeID            geometry
@@ -563,13 +570,13 @@ sf_to_tidygraph(muenster_center, directed = FALSE)
     ## 6      6 (7.625926 51.95595)
     ## # … with 3,316 more rows
     ## #
-    ## # Edge Data: 4,681 x 5
+    ## # Edge Data: 4,673 x 5
     ##    from    to highway                                       geometry edgeID
     ##   <int> <int> <fct>                                 <LINESTRING [°]>  <int>
     ## 1     1     2 primary         (7.625074 51.95564, 7.625275 51.95566)      1
     ## 2     1     3 primary (7.624554 51.95561, 7.624838 51.95562, 7.6249…      2
     ## 3     4     5 primary (7.626498 51.95617, 7.626437 51.95617, 7.6263…      3
-    ## # … with 4,678 more rows
+    ## # … with 4,670 more rows
 
 ## Combining the best of both worlds
 
@@ -592,11 +599,11 @@ graph <- graph %>%
 graph
 ```
 
-    ## # A tbl_graph: 3322 nodes and 4681 edges
+    ## # A tbl_graph: 3322 nodes and 4673 edges
     ## #
-    ## # An undirected multigraph with 33 components
+    ## # An undirected multigraph with 37 components
     ## #
-    ## # Edge Data: 4,681 x 6 (active)
+    ## # Edge Data: 4,673 x 6 (active)
     ##    from    to highway                              geometry edgeID   length
     ##   <int> <int> <fct>                        <LINESTRING [°]>  <int>      [m]
     ## 1     1     2 primary  (7.625074 51.95564, 7.625275 51.955…      1 14.0982…
@@ -605,7 +612,7 @@ graph
     ## 4     6     7 primary  (7.625926 51.95595, 7.625907 51.955…      4 24.8519…
     ## 5     5     6 primary  (7.626103 51.9561, 7.626058 51.9560…      5 20.7254…
     ## 6     8     9 residen… (7.630898 51.95573, 7.63084 51.9556…      6  8.0905…
-    ## # … with 4,675 more rows
+    ## # … with 4,667 more rows
     ## #
     ## # Node Data: 3,322 x 2
     ##   nodeID            geometry
@@ -641,18 +648,18 @@ graph %>%
     ##    highway         length                                          geometry
     ##  * <fct>              [m]                             <MULTILINESTRING [°]>
     ##  1 corridor        9.377… ((7.620506 51.96262, 7.620542 51.96266), (7.6205…
-    ##  2 cycleway    22807.075… ((7.619683 51.95395, 7.619641 51.95378, 7.619559…
-    ##  3 footway     42923.286… ((7.640529 51.95325, 7.640528 51.95323), (7.6405…
+    ##  2 cycleway    22929.349… ((7.619683 51.95395, 7.619641 51.95378, 7.619559…
+    ##  3 footway     42782.207… ((7.640529 51.95325, 7.640528 51.95323), (7.6405…
     ##  4 path         7642.403… ((7.624007 51.95379, 7.624223 51.95378, 7.624253…
     ##  5 pedestrian  11439.762… ((7.620362 51.95471, 7.620477 51.9547), (7.62012…
     ##  6 primary      3539.164… ((7.625556 51.95272, 7.625594 51.95284, 7.625714…
     ##  7 primary_li…   184.385… ((7.617285 51.96609, 7.617286 51.96624, 7.617295…
-    ##  8 residential 22712.272… ((7.614509 51.95351, 7.614554 51.95346), (7.6326…
+    ##  8 residential 22714.998… ((7.614509 51.95351, 7.614554 51.95346), (7.6326…
     ##  9 secondary    4471.930… ((7.631252 51.95402, 7.631405 51.95399), (7.6311…
     ## 10 secondary_…   160.708… ((7.635309 51.95946, 7.635705 51.95948), (7.6349…
-    ## 11 service     26990.542… ((7.624803 51.95393, 7.625072 51.95393), (7.6158…
-    ## 12 steps        1318.727… ((7.634423 51.9546, 7.634438 51.95462), (7.61430…
-    ## 13 tertiary     4353.747… ((7.607112 51.94991, 7.607126 51.94992, 7.607183…
+    ## 11 service     26954.215… ((7.624803 51.95393, 7.625072 51.95393), (7.6158…
+    ## 12 steps        1293.775… ((7.634423 51.9546, 7.634438 51.95462), (7.61430…
+    ## 13 tertiary     4305.225… ((7.607112 51.94991, 7.607126 51.94992, 7.607183…
     ## 14 tertiary_l…    43.856… ((7.623592 51.96612, 7.623568 51.96611, 7.623468…
     ## 15 track         389.866… ((7.610671 51.95778, 7.610571 51.95759, 7.610585…
     ## 16 unclassifi…   610.488… ((7.634492 51.95613, 7.634689 51.95611), (7.6343…
@@ -727,27 +734,27 @@ graph <- graph %>%
 graph
 ```
 
-    ## # A tbl_graph: 3322 nodes and 4681 edges
+    ## # A tbl_graph: 3322 nodes and 4673 edges
     ## #
-    ## # An undirected multigraph with 33 components
+    ## # An undirected multigraph with 37 components
     ## #
-    ## # Edge Data: 4,681 x 7 (active)
+    ## # Edge Data: 4,673 x 7 (active)
     ##    from    to highway                  geometry edgeID   length betweenness
     ##   <int> <int> <fct>            <LINESTRING [°]>  <int>      [m]       <dbl>
-    ## 1     1     2 primary (7.625074 51.95564, 7.62…      1 14.0982…       47557
-    ## 2     1     3 primary (7.624554 51.95561, 7.62…      2 35.8537…       55022
-    ## 3     4     5 primary (7.626498 51.95617, 7.62…      3 29.0521…      112048
-    ## 4     6     7 primary (7.625926 51.95595, 7.62…      4 24.8519…       19850
-    ## 5     5     6 primary (7.626103 51.9561, 7.626…      5 20.7254…       98205
+    ## 1     1     2 primary (7.625074 51.95564, 7.62…      1 14.0982…       47471
+    ## 2     1     3 primary (7.624554 51.95561, 7.62…      2 35.8537…       54910
+    ## 3     4     5 primary (7.626498 51.95617, 7.62…      3 29.0521…      112002
+    ## 4     6     7 primary (7.625926 51.95595, 7.62…      4 24.8519…       19822
+    ## 5     5     6 primary (7.626103 51.9561, 7.626…      5 20.7254…       98127
     ## 6     8     9 reside… (7.630898 51.95573, 7.63…      6  8.0905…       26508
-    ## # … with 4,675 more rows
+    ## # … with 4,667 more rows
     ## #
     ## # Node Data: 3,322 x 4
     ##   nodeID            geometry degree betweenness
     ##    <int>         <POINT [°]>  <dbl>       <dbl>
-    ## 1      1 (7.625074 51.95564)      3       54474
-    ## 2      2 (7.625275 51.95566)      2       45709
-    ## 3      3 (7.624554 51.95561)      4      130242
+    ## 1      1 (7.625074 51.95564)      3       54368
+    ## 2      2 (7.625275 51.95566)      2       45630
+    ## 3      3 (7.624554 51.95561)      4      130103
     ## # … with 3,319 more rows
 
 ``` r
@@ -834,31 +841,23 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 72/3322 vertices, from 322ee61:
-    ##  [1] 2404 2402 1451 1366 1367 1400 2405 1371 1554 1544 1543 1538 3175 1343
-    ## [15] 1344  293   22   23 2795 3283  301  302  303 3282 2778  462 3066  965
-    ## [29] 2771  451 2314 2310 2200  480 2311 2312  617 2313 1790  597 1575 2362
-    ## [43] 1730 2361  164 1506 1507  831  199  200 1740 2162  350  342  346  345
-    ## [57]  347  348  349 1563 2153 2152 2179  916  930  931  176  774  615  126
-    ## [71] 2365 1679
+    ## + 34/3322 vertices, from 297924e:
+    ##  [1] 2404 2403 1230 1229 1228 1367 1368 1403 2868 1187 1188  148 1220 1221
+    ## [15] 1222 1424 1423 1430 1431 1445  458  459 1614  506  498  499  500  501
+    ## [29]  502  503 1721 1722 1678 1679
 
 ``` r
 path$epath
 ```
 
     ## [[1]]
-    ## + 71/4681 edges from 322ee61:
-    ##  [1] 2402--2404 1451--2402 1366--1451 1366--1367 1367--1400 1400--2405
-    ##  [7] 1371--2405 1371--1554 1544--1554 1543--1544 1538--1543 1538--3175
-    ## [13] 1343--3175 1343--1344  293--1344   22-- 293   22--  23   23--2795
-    ## [19] 2795--3283  301--3283  301-- 302  302-- 303  303--3282 2778--3282
-    ## [25]  462--2778  462--3066  965--3066  965--2771  451--2771  451--2314
-    ## [31] 2310--2314 2200--2310  480--2200  480--2311 2311--2312  617--2312
-    ## [37]  617--2313 1790--2313  597--1790  597--1575 1575--2362 1730--2362
-    ## [43] 1730--2361  164--2361  164--1506 1506--1507  831--1507  199-- 831
-    ## [49]  199-- 200  200--1740 1740--2162  350--2162  342-- 350  342-- 346
-    ## [55]  345-- 346  345-- 347  347-- 348  348-- 349  349--1563 1563--2153
-    ## + ... omitted several edges
+    ## + 33/4673 edges from 297924e:
+    ##  [1] 2403--2404 1230--2403 1229--1230 1228--1229 1228--1367 1367--1368
+    ##  [7] 1368--1403 1403--2868 1187--2868 1187--1188  148--1188  148--1220
+    ## [13] 1220--1221 1221--1222 1222--1424 1423--1424 1423--1430 1430--1431
+    ## [19] 1431--1445  458--1445  458-- 459  459--1614  506--1614  498-- 506
+    ## [25]  498-- 499  499-- 500  500-- 501  501-- 502  502-- 503  503--1721
+    ## [31] 1721--1722 1678--1722 1678--1679
 
 ``` r
 path_graph <- graph %>%
@@ -870,28 +869,28 @@ path_graph <- graph %>%
 path_graph
 ```
 
-    ## # A tbl_graph: 72 nodes and 71 edges
+    ## # A tbl_graph: 34 nodes and 33 edges
     ## #
     ## # An undirected simple graph with 1 component
     ## #
-    ## # Node Data: 72 x 4 (active)
+    ## # Node Data: 34 x 4 (active)
     ##   nodeID            geometry degree betweenness
     ##    <int>         <POINT [°]>  <dbl>       <dbl>
-    ## 1     22 (7.618428 51.95743)      3      194742
-    ## 2     23  (7.618811 51.9574)      2      196805
-    ## 3    126 (7.633768 51.96201)      5      188852
-    ## 4    164 (7.624123 51.96061)      3      790638
-    ## 5    176 (7.632057 51.96131)      3      232450
-    ## 6    199 (7.626123 51.96065)      3      726916
-    ## # … with 66 more rows
+    ## 1    148 (7.612122 51.95986)      3      116092
+    ## 2    458 (7.612711 51.96182)      3       66173
+    ## 3    459 (7.612722 51.96202)      2       48801
+    ## 4    498 (7.612767 51.96253)      4       27074
+    ## 5    499 (7.612659 51.96259)      3       14700
+    ## 6    500 (7.611899 51.96294)      4       38902
+    ## # … with 28 more rows
     ## #
-    ## # Edge Data: 71 x 7
+    ## # Edge Data: 33 x 7
     ##    from    to highway                  geometry edgeID   length betweenness
     ##   <int> <int> <fct>            <LINESTRING [°]>  <int>      [m]       <dbl>
-    ## 1     1     2 tertia… (7.618428 51.95743, 7.61…     17 26.5927…      197281
-    ## 2     6     7 reside… (7.626123 51.96065, 7.62…    156 13.0896…      653223
-    ## 3     1     8 footway (7.618428 51.95743, 7.61…    243  8.7796…       89154
-    ## # … with 68 more rows
+    ## 1     2     3 service (7.612711 51.96182, 7.61…    399 21.8535…       51010
+    ## 2     4     5 service (7.612767 51.96253, 7.61…    433  9.6982…       16712
+    ## 3     6     7 service (7.611899 51.96294, 7.61…    434 31.0929…       34059
+    ## # … with 30 more rows
 
 ``` r
 ggplot() +
@@ -906,62 +905,8 @@ ggplot() +
 However, often we will be interested in shortest paths between
 geographical points that are not necessarily nodes in the network. For
 example, we might want to calculate the shortest path from the railway
-station of Münster to the cathedral. For this purpose, the dodgr
-package, designed with a focus on routing in street networks, comes in
-handy. If we provide it the network, and the coordinates of the desired
-from and two points as two-column matrices, it will find the network
-points closest to the given locations, and calculate the shortest paths.
-In computing time, dodgr even outperforms igraph.
-
-However, dodgr does not work with sf-like geometry list columns (yet?).
-Instead, it assumes the graph to be a single data.frame, or similar
-object, containing the longitudes and latitudes of the from and to nodes
-in distinct columns. Also, the distance column should be a numeric
-column called `dist`, and not a `units` class called `length`.
-Therefore, we need to take some pre-processing steps before we can use
-dodgr. Again, we will show an example of a shortest path from one
-location to another, but it is just as well possible to do the same for
-one to many, many to one, or many to many locations.
-
-``` r
-library(dodgr)
-
-node_coordinates <- graph %>%
-  activate(nodes) %>%
-  as_tibble() %>%
-  st_as_sf() %>%
-  st_coordinates() %>%
-  as_tibble() %>%
-  mutate(nodeID = graph %>% activate(nodes) %>% pull(nodeID))
-
-dodgr_graph <- graph %>%
-  activate(edges) %>%
-  as_tibble() %>%
-  mutate(dist = as.numeric(length)) %>% 
-  rename(edge_id = edgeID) %>%
-  left_join(node_coordinates, by = c('from' = 'nodeID')) %>%
-  rename(from_id = from, from_lon = X, from_lat = Y) %>%
-  left_join(node_coordinates, by = c('to' = 'nodeID')) %>%
-  rename(to_id = to, to_lon = X, to_lat = Y) %>%
-  select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist) %>% 
-  as.data.frame() %>% # a tibble is not recognized by dodgr
-  dodgr_components() # a requirement to for a dodgr_streetnet 
-
-dodgr_graph %>% head(10) %>% knitr::kable()
-```
-
-| edge\_id | from\_id | from\_lon | from\_lat | to\_id |  to\_lon |  to\_lat |      dist | component |
-| -------: | -------: | --------: | --------: | -----: | -------: | -------: | --------: | --------: |
-|        1 |        1 |  7.625074 |  51.95564 |      2 | 7.625275 | 51.95566 | 14.098206 |         1 |
-|        2 |        1 |  7.625074 |  51.95564 |      3 | 7.624554 | 51.95561 | 35.853712 |         1 |
-|        3 |        4 |  7.626498 |  51.95617 |      5 | 7.626103 | 51.95610 | 29.052144 |         1 |
-|        4 |        6 |  7.625926 |  51.95595 |      7 | 7.625906 | 51.95573 | 24.851908 |         1 |
-|        5 |        5 |  7.626103 |  51.95610 |      6 | 7.625926 | 51.95595 | 20.725463 |         1 |
-|        6 |        8 |  7.630898 |  51.95573 |      9 | 7.630840 | 51.95567 |  8.090592 |         1 |
-|        7 |        9 |  7.630840 |  51.95567 |     10 | 7.630480 | 51.95524 | 53.376161 |         1 |
-|        8 |       10 |  7.630480 |  51.95524 |     11 | 7.630307 | 51.95505 | 24.625794 |         1 |
-|        9 |       11 |  7.630307 |  51.95505 |     12 | 7.630082 | 51.95479 | 32.055081 |         1 |
-|       10 |       13 |  7.619720 |  51.95545 |     14 | 7.619832 | 51.95512 | 37.216511 |         1 |
+station of Münster to the
+cathedral.
 
 ``` r
 muenster_station <- st_point(c(7.6349, 51.9566)) %>% st_sfc(crs = 4326) %>% st_coordinates()
@@ -973,24 +918,186 @@ muenster_station
     ## 1 7.6349 51.9566
 
 ``` r
-muenster_cathedral <- st_point(c(7.62199751, 51.957829502)) %>% st_sfc(crs = 4326) %>% st_coordinates()
+muenster_cathedral <- st_point(c(7.626, 51.962)) %>%
+  st_sfc(crs = 4326) %>%
+  st_coordinates()
 
 muenster_cathedral
 ```
 
-    ##          X        Y
-    ## 1 7.621998 51.95783
+    ##       X      Y
+    ## 1 7.626 51.962
 
 ``` r
-path <- dodgr::dodgr_paths(
-  graph = dodgr_graph,
-  from = muenster_cathedral,
-  to = muenster_station
-)
-
-path ## It works but just cannot find a path between the two points. Possibly has to do with the fact that the graph is undirected and dodgr only works with directed graphs. 
+coords_o = matrix(muenster_station, ncol = 2)
+coords_d = matrix(muenster_cathedral, ncol = 2)
 ```
 
-    ## $`1`
-    ## $`1`$`1-1`
-    ## NULL
+To find the route on the network, we must first identify the nearest
+points on the network.
+
+``` r
+nodes_coords = st_coordinates(nodes)
+node_index_o = nabor::knn(data = nodes_coords, query = coords_o, k = 1)
+node_index_d = nabor::knn(data = nodes_coords, query = coords_d, k = 1)
+node_o = nodes[node_index_o$nn.idx, ]
+node_d = nodes[node_index_d$nn.idx, ]
+```
+
+Like before, we use the ID to calculate the shortest path:
+
+``` r
+path <- shortest_paths(
+  graph = graph,
+  from = node_o$nodeID, # new origin
+  to = node_d$nodeID,   # new destination
+  output = 'both',
+  weights = graph %>% activate(edges) %>% pull(length)
+)
+
+path$vpath
+```
+
+    ## [[1]]
+    ## + 58/3322 vertices, from 297924e:
+    ##  [1] 3275 3085 3084  317 1604  844  309 1606   98   99  100 2206 2209 2207
+    ## [15] 1449  487 1160 2208 2501  102  101 2579 1920  144  145 1384  119 1593
+    ## [29] 1586  850  851  848  849 1589 2578 2791 1460 1478 1477  336  337 2067
+    ## [43] 2066 2069 2070 2072 2071 2074 2073 2075 2068 2065  200  199  831  832
+    ## [57]  833  400
+
+``` r
+path$epath
+```
+
+    ## [[1]]
+    ## + 57/4673 edges from 297924e:
+    ##  [1] 3085--3275 3084--3085  317--3084  317--1604  844--1604  309-- 844
+    ##  [7]  309--1606   98--1606   98--  99   99-- 100  100--2206 2206--2209
+    ## [13] 2207--2209 1449--2207  487--1449  487--1160 1160--2208 2208--2501
+    ## [19]  102--2501  101-- 102  101--2579 1920--2579  144--1920  144-- 145
+    ## [25]  145--1384  119--1384  119--1593 1586--1593  850--1586  850-- 851
+    ## [31]  848-- 851  848-- 849  849--1589 1589--2578 2578--2791 1460--2791
+    ## [37] 1460--1478 1477--1478  336--1477  336-- 337  337--2067 2066--2067
+    ## [43] 2066--2069 2069--2070 2070--2072 2071--2072 2071--2074 2073--2074
+    ## [49] 2073--2075 2068--2075 2065--2068  200--2065  199-- 200  199-- 831
+    ## [55]  831-- 832  832-- 833  400-- 833
+
+``` r
+path_graph <- graph %>%
+  activate(edges) %>%
+  slice(path$epath %>% unlist()) %>%
+  activate(nodes) %>%
+  slice(path$vpath %>% unlist())
+
+path_sf = path_graph %>% 
+  activate(edges) %>% 
+  as_tibble() %>%
+  st_as_sf()
+mapview::mapview(path_sf)
+```
+
+![](blogpost_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+
+It worked\! We calculated a path from the rail station to the centre, a
+common trip taken by tourists visiting Muenster. Clearly this is not a
+finished piece of work but the post has demonstrated what is possible.
+Future functionality should look to make spatial networks more user
+friendly, including provision of ‘weighting profiles’, batch routing and
+functions that reduce the number of steps needed to work with spatial
+network data in R.
+
+For alternative approaches and further reading, the following resources
+are recommended:
+
+  - sfnetworks, a GitHub package that implements some of the ideas in
+    this post: <https://github.com/luukvdmeer/sfnetworks>
+
+  - stplanr, a package for transport planning:
+    <https://github.com/ropensci/stplanr>
+
+  - dodgr, distances on directed graphs:
+    <https://github.com/ATFutures/dodgr>
+
+  - cppRouting, a package for routing in C++:
+    <https://github.com/vlarmet/cppRouting>
+
+  - Chapter 10 of Geocomputation with R, which provides context and
+    demonstrates a transport planning workflow in R:
+    <https://geocompr.robinlovelace.net/transport.html>
+
+  - 
+
+<!-- For this purpose, the dodgr package, designed with a focus on routing in street networks, comes in handy. If we provide it the network, and the coordinates of the desired from and two points as two-column matrices, it will find the network points closest to the given locations, and calculate the shortest paths. In computing time, dodgr even outperforms igraph.  -->
+
+<!-- However, dodgr does not work with sf-like geometry list columns (yet?). Instead, it assumes the graph to be a single data.frame, or similar object, containing the longitudes and latitudes of the from and to nodes in distinct columns. Also, the distance column should be a numeric column called `dist`, and not a `units` class called `length`. Therefore, we need to take some pre-processing steps before we can use dodgr. Again, we will show an example of a shortest path from one location to another, but it is just as well possible to do the same for one to many, many to one, or many to many locations. -->
+
+<!-- ```{r, results='asis'} -->
+
+<!-- library(dodgr) -->
+
+<!-- node_coordinates <- graph %>% -->
+
+<!--   activate(nodes) %>% -->
+
+<!--   as_tibble() %>% -->
+
+<!--   st_as_sf() %>% -->
+
+<!--   st_coordinates() %>% -->
+
+<!--   as_tibble() %>% -->
+
+<!--   mutate(nodeID = graph %>% activate(nodes) %>% pull(nodeID)) -->
+
+<!-- dodgr_graph <- graph %>% -->
+
+<!--   activate(edges) %>% -->
+
+<!--   as_tibble() %>% -->
+
+<!--   mutate(dist = as.numeric(length)) %>%  -->
+
+<!--   rename(edge_id = edgeID) %>% -->
+
+<!--   left_join(node_coordinates, by = c('from' = 'nodeID')) %>% -->
+
+<!--   rename(from_id = from, from_lon = X, from_lat = Y) %>% -->
+
+<!--   left_join(node_coordinates, by = c('to' = 'nodeID')) %>% -->
+
+<!--   rename(to_id = to, to_lon = X, to_lat = Y) %>% -->
+
+<!--   select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist) %>%  -->
+
+<!--   as.data.frame() %>% # a tibble is not recognized by dodgr -->
+
+<!--   dodgr_components() # a requirement to for a dodgr_streetnet  -->
+
+<!-- dodgr_graph %>% head(10) %>% knitr::kable() -->
+
+<!-- ``` -->
+
+<!-- ```{r, error = TRUE} -->
+
+<!-- muenster_station <- st_point(c(7.6349, 51.9566)) %>% st_sfc(crs = 4326) %>% st_coordinates() -->
+
+<!-- muenster_station -->
+
+<!-- muenster_cathedral <- st_point(c(7.62199751, 51.957829502)) %>% st_sfc(crs = 4326) %>% st_coordinates() -->
+
+<!-- muenster_cathedral -->
+
+<!-- path <- dodgr::dodgr_paths( -->
+
+<!--   graph = dodgr_graph, -->
+
+<!--   from = muenster_cathedral, -->
+
+<!--   to = muenster_station -->
+
+<!-- ) -->
+
+<!-- path ## It works but just cannot find a path between the two points. Possibly has to do with the fact that the graph is undirected and dodgr only works with directed graphs.  -->
+
+<!-- ``` -->

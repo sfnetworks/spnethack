@@ -9,15 +9,16 @@ Street networks, shipping routes, telecommunication lines, river bassins. All ex
 
 Such spatial networks can be analyzed using graph theory. Not for nothing, Leonhard Eulers famous work on the [Seven Bridges of Köningsberg](https://www.mathsisfun.com/activity/seven-bridges-konigsberg.html), which laid the foundations of graph theory and network analysis, was in essence a spatial problem.
 
-In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. However, as we learned from this [github issue](https://github.com/r-spatial/sf/issues/966) and this [tweet](https://twitter.com/zevross/status/1089908839816794118), concensus on how best to represent and analyse spatial networks has proved elusive.
+In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. As stated in this [github issue](https://github.com/r-spatial/sf/issues/966) and this [tweet](https://twitter.com/zevross/status/1089908839816794118), concensus on how best to represent and analyse spatial networks has proved elusive.
 
-Rhis blogpost takes a first step in this direction, demonstrating an approach that starts with a set of geographic lines, and leads to an object ready to be used for network analysis. Along the way, we will see that there are still steps to take before the process of analyzing spatial networks in R is clear, modern and efficient.
+This blogpost demonstrates an approach to spatial networks that starts with a set of geographic lines, and leads to an object ready to be used for network analysis.
+Along the way, we will see that there are still steps that need to be taken before the process of analyzing spatial networks in R is user friendly and efficient.
 
 ## Existing R packages for spatial networks
 
 Although R was originally designed as a language for statistical computing, an active 'R-spatial' ecosystem has evolved.
 Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf) (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial) of Geocomputation with R for a brief history).
-Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph), based on lower level libraries such as [igraph](https://igraph.org/).
+Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph), which is based on  [igraph](https://igraph.org/).
 
 Both sf and tidygraph support the the `tibble` class and the broader 'tidy' approach to data science, which involves data processing pipelines, type stability and a convention of representing everything as a data frame (well a `tibble`, which is a data frame with user friendly default settings).
 In sf, this means storing spatial vector data as objects of class `sf`, which are essentially the same as a regular data frame (or tibble), but with an additional 'sticky' list column containing a geometry for each feature (row), and attributes such as bounding box and CRS.
@@ -25,9 +26,13 @@ Tidygraph stores networks in objects of class `tbl_graph`. A `tbl_graph` is an `
 
 Both sf and tidygraph are relatively new packages (first released on CRAN in 2016 and 2017, respectively).
 It is unsurprising, therefore, that they have yet to be combined to allow a hybrid, tibble-based representation of spatial networks.
-Nevertheless, a number of other approaches have been developed for representing spatial networks, and some of these are in packages that have been published on CRAN. [stplanr](https://github.com/ropensci/stplanr), for instance, contains the `SpatialLinesNetwork` class, which works with both the [sp](https://github.com/edzer/sp/) (a package for spatial data analysis launched in 2005) and sf packages.
+
+Nevertheless, a number of approaches have been developed for representing spatial networks, and some of these are in packages that have been published on CRAN. [stplanr](https://github.com/ropensci/stplanr), for instance, contains the `SpatialLinesNetwork` class, which works with both the [sp](https://github.com/edzer/sp/) (a package for spatial data analysis launched in 2005) and sf packages.
 [dodgr](https://github.com/ATFutures/dodgr) is a more recent package that provides analytical tools for street networks, with a focus on directed graphs (that can have direction-dependent weights, e.g. representing a one-way street).
 Other packages seeking to implement spatial networks in R include [spnetwork](https://github.com/edzer/spnetwork), a package that defined a class system combining sp and igraph, and [shp2graph](https://cran.r-project.org/web/packages/shp2graph/index.html), which provides tools to switch between sp and igraph objects.
+
+Each package has its merits that deserve to be explored in more detail (possibly in a subsequent blog post).
+The remainder of this post outlines an approach that combines `sf` and `igraph` objects in a `tidygraph` object.
 
 ## Set-up
 
@@ -389,51 +394,129 @@ ggplot() +
   geom_sf(data = path_graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 1)
 ```
 
-However, often we will be interested in shortest paths between geographical points that are not necessarily nodes in the network. For example, we might want to calculate the shortest path from the railway station of Münster to the cathedral. For this purpose, the dodgr package, designed with a focus on routing in street networks, comes in handy. If we provide it the network, and the coordinates of the desired from and two points as two-column matrices, it will find the network points closest to the given locations, and calculate the shortest paths. In computing time, dodgr even outperforms igraph. 
+However, often we will be interested in shortest paths between geographical points that are not necessarily nodes in the network. For example, we might want to calculate the shortest path from the railway station of Münster to the cathedral.
 
-However, dodgr does not work with sf-like geometry list columns (yet?). Instead, it assumes the graph to be a single data.frame, or similar object, containing the longitudes and latitudes of the from and to nodes in distinct columns. Also, the distance column should be a numeric column called `dist`, and not a `units` class called `length`. Therefore, we need to take some pre-processing steps before we can use dodgr. Again, we will show an example of a shortest path from one location to another, but it is just as well possible to do the same for one to many, many to one, or many to many locations.
-
-```{r, results='asis'}
-library(dodgr)
-
-node_coordinates <- graph %>%
-  activate(nodes) %>%
-  as_tibble() %>%
-  st_as_sf() %>%
-  st_coordinates() %>%
-  as_tibble() %>%
-  mutate(nodeID = graph %>% activate(nodes) %>% pull(nodeID))
-
-dodgr_graph <- graph %>%
-  activate(edges) %>%
-  as_tibble() %>%
-  mutate(dist = as.numeric(length)) %>% 
-  rename(edge_id = edgeID) %>%
-  left_join(node_coordinates, by = c('from' = 'nodeID')) %>%
-  rename(from_id = from, from_lon = X, from_lat = Y) %>%
-  left_join(node_coordinates, by = c('to' = 'nodeID')) %>%
-  rename(to_id = to, to_lon = X, to_lat = Y) %>%
-  select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist) %>% 
-  as.data.frame() %>% # a tibble is not recognized by dodgr
-  dodgr_components() # a requirement to for a dodgr_streetnet 
-
-dodgr_graph %>% head(10) %>% knitr::kable()
-```
-
-```{r, error = TRUE}
+```{r}
 muenster_station <- st_point(c(7.6349, 51.9566)) %>% st_sfc(crs = 4326) %>% st_coordinates()
 
 muenster_station
 
-muenster_cathedral <- st_point(c(7.62199751, 51.957829502)) %>% st_sfc(crs = 4326) %>% st_coordinates()
+muenster_cathedral <- st_point(c(7.626, 51.962)) %>%
+  st_sfc(crs = 4326) %>%
+  st_coordinates()
 
 muenster_cathedral
 
-path <- dodgr::dodgr_paths(
-  graph = dodgr_graph,
-  from = muenster_cathedral,
-  to = muenster_station
+coords_o = matrix(muenster_station, ncol = 2)
+coords_d = matrix(muenster_cathedral, ncol = 2)
+```
+
+
+```{r, eval=FALSE, echo=FALSE}
+text_o = "Muenster domplatz"
+text_d = "Muenster railway station"
+list_o = tmaptools::geocode_OSM(text_o)
+list_d = tmaptools::geocode_OSM(text_d)
+coords_o = matrix(list_o$coords, ncol = 2)
+coords_d = matrix(list_d$coords, ncol = 2)
+```
+
+To find the route on the network, we must first identify the nearest points on the network.
+
+```{r}
+nodes_coords = st_coordinates(nodes)
+node_index_o = nabor::knn(data = nodes_coords, query = coords_o, k = 1)
+node_index_d = nabor::knn(data = nodes_coords, query = coords_d, k = 1)
+node_o = nodes[node_index_o$nn.idx, ]
+node_d = nodes[node_index_d$nn.idx, ]
+```
+
+Like before, we use the ID to calculate the shortest path:
+
+```{r}
+path <- shortest_paths(
+  graph = graph,
+  from = node_o$nodeID, # new origin
+  to = node_d$nodeID,   # new destination
+  output = 'both',
+  weights = graph %>% activate(edges) %>% pull(length)
 )
 
-path ## It works but just cannot find a path between the two points. Possibly has to do with the fact that the graph is undirected and dodgr only works with directed graphs. 
+path$vpath
+
+path$epath
+
+path_graph <- graph %>%
+  activate(edges) %>%
+  slice(path$epath %>% unlist()) %>%
+  activate(nodes) %>%
+  slice(path$vpath %>% unlist())
+
+path_sf = path_graph %>% 
+  activate(edges) %>% 
+  as_tibble() %>%
+  st_as_sf()
+mapview::mapview(path_sf)
 ```
+
+It worked!
+We calculated a path from the rail station to the centre, a common trip taken by tourists visiting Muenster.
+Clearly this is not a finished piece of work but the post has demonstrated what is possible.
+Future functionality should look to make spatial networks more user friendly, including provision of 'weighting profiles', batch routing and functions that reduce the number of steps needed to work with spatial network data in R.
+
+For alternative approaches and further reading, the following resources are recommended:
+
+- sfnetworks, a GitHub package that implements some of the ideas in this post: https://github.com/luukvdmeer/sfnetworks
+- stplanr, a package for transport planning: https://github.com/ropensci/stplanr
+- dodgr, distances on directed graphs: https://github.com/ATFutures/dodgr
+- cppRouting, a package for routing in C++: https://github.com/vlarmet/cppRouting
+- Chapter 10 of Geocomputation with R, which provides context and demonstrates a transport planning workflow in R: https://geocompr.robinlovelace.net/transport.html
+
+<!-- For this purpose, the dodgr package, designed with a focus on routing in street networks, comes in handy. If we provide it the network, and the coordinates of the desired from and two points as two-column matrices, it will find the network points closest to the given locations, and calculate the shortest paths. In computing time, dodgr even outperforms igraph.  -->
+
+<!-- However, dodgr does not work with sf-like geometry list columns (yet?). Instead, it assumes the graph to be a single data.frame, or similar object, containing the longitudes and latitudes of the from and to nodes in distinct columns. Also, the distance column should be a numeric column called `dist`, and not a `units` class called `length`. Therefore, we need to take some pre-processing steps before we can use dodgr. Again, we will show an example of a shortest path from one location to another, but it is just as well possible to do the same for one to many, many to one, or many to many locations. -->
+
+<!-- ```{r, results='asis'} -->
+<!-- library(dodgr) -->
+
+<!-- node_coordinates <- graph %>% -->
+<!--   activate(nodes) %>% -->
+<!--   as_tibble() %>% -->
+<!--   st_as_sf() %>% -->
+<!--   st_coordinates() %>% -->
+<!--   as_tibble() %>% -->
+<!--   mutate(nodeID = graph %>% activate(nodes) %>% pull(nodeID)) -->
+
+<!-- dodgr_graph <- graph %>% -->
+<!--   activate(edges) %>% -->
+<!--   as_tibble() %>% -->
+<!--   mutate(dist = as.numeric(length)) %>%  -->
+<!--   rename(edge_id = edgeID) %>% -->
+<!--   left_join(node_coordinates, by = c('from' = 'nodeID')) %>% -->
+<!--   rename(from_id = from, from_lon = X, from_lat = Y) %>% -->
+<!--   left_join(node_coordinates, by = c('to' = 'nodeID')) %>% -->
+<!--   rename(to_id = to, to_lon = X, to_lat = Y) %>% -->
+<!--   select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist) %>%  -->
+<!--   as.data.frame() %>% # a tibble is not recognized by dodgr -->
+<!--   dodgr_components() # a requirement to for a dodgr_streetnet  -->
+
+<!-- dodgr_graph %>% head(10) %>% knitr::kable() -->
+<!-- ``` -->
+
+<!-- ```{r, error = TRUE} -->
+<!-- muenster_station <- st_point(c(7.6349, 51.9566)) %>% st_sfc(crs = 4326) %>% st_coordinates() -->
+
+<!-- muenster_station -->
+
+<!-- muenster_cathedral <- st_point(c(7.62199751, 51.957829502)) %>% st_sfc(crs = 4326) %>% st_coordinates() -->
+
+<!-- muenster_cathedral -->
+
+<!-- path <- dodgr::dodgr_paths( -->
+<!--   graph = dodgr_graph, -->
+<!--   from = muenster_cathedral, -->
+<!--   to = muenster_station -->
+<!-- ) -->
+
+<!-- path ## It works but just cannot find a path between the two points. Possibly has to do with the fact that the graph is undirected and dodgr only works with directed graphs.  -->
+<!-- ``` -->
