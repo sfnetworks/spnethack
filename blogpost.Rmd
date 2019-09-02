@@ -71,14 +71,17 @@ library(dplyr)
 library(tibble)
 library(ggplot2)
 library(units)
+library(tmap)
+library(osmdata)
+library(rgrass7)
+library(link2GI)
+library(nabor)
 ```
 
 ## Getting the data 
-As an example, we use the street network of the city center of Münster, Germany. We will get the data from OpenStreetMap. Packages like `dodgr` have optimized their code for such data, however considering that we want to showcase this workflow for any source of data, we will generate an object of class `sf` containing only `LINESTRING` geometries. One additional variable, the type of street, is added to show that the same steps can be used for `sf` objects that contain any number of additional variables.
+As an example, we use the street network of the city center of Münster, Germany. We will get the data from OpenStreetMap. Packages like `dodgr` have optimized their code for such data, however considering that we want to showcase this workflow for any source of data, we will generate an object of class `sf` containing only `LINESTRING` geometries. However, streets that form loops, are returned by `osmdata` as polygons, rather than lines. These, we will convert to lines, using the `osm_poly2line` function. One additional variable, the type of street, is added to show that the same steps can be used for `sf` objects that contain any number of additional variables.
 
 ```{r}
-library(osmdata)
-
 muenster <- opq(bbox =  c(7.61, 51.954, 7.636, 51.968)) %>% 
   add_osm_feature(key = 'highway') %>% 
   osmdata_sf() %>% 
@@ -99,18 +102,16 @@ ggplot(data = muenster_center) + geom_sf()
 ## From sf to tbl_graph: a step wise approach
 
 ### Step 1: Clean the network
-To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html) toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html) and [link2GI](https://github.com/r-spatial/link2GI) packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of Geocomputation with R. Take into account that the linking process may take up some time, especially on windows operating systems.
+To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html) toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html) and [link2GI](https://github.com/r-spatial/link2GI) packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of Geocomputation with R. Take into account that the linking process may take up some time, especially on Windows operating systems.
 
 Here, we will clean the network topology by breaking lines at intersections and also breaking lines that form a collapsed loop. This will be followed by a removal of duplicated geometry features. Once done, we will read the data back into R, and convert again into an `sf` object with `LINESTRING` geometry.
 
 ```{r, eval=TRUE}
 # Link tot GRASS GIS
-link2GI::linkGRASS7(muenster_center, ver_select = TRUE)
+linkGRASS7(muenster_center, ver_select = TRUE)
 ```
 
 ```{r, message = FALSE, warning = FALSE, results = FALSE}
-library(rgrass7)
-
 # Add data to GRASS spatial database  
 writeVECT(
   SDF = muenster_center, 
@@ -139,8 +140,8 @@ muenster_center <- readVECT('muenster_cleaned') %>%
 muenster_center
 ```
 
-### Step 2: Give each edge an unique index
-The edges of the network, are simply the linestrings in the data. Each of them gets an unique index, which can be later be related to their start and end node.
+### Step 2: Give each edge a unique index
+The edges of the network, are simply the linestrings in the data. Each of them gets a unique index, which can be later be related to their start and end node.
 
 ```{r}
 edges <- muenster_center %>%
@@ -165,8 +166,8 @@ nodes <- edges %>%
 nodes
 ```
 
-### Step 4: Give each node an unique index
-Each of the nodes in the network needs to get an unique index, such that they can be related to the edges. However, we need to take into account that edges can share either startpoints and/or endpoints. Such duplicated points, that have the same X and Y coordinate, are one single node, and should therefore get the same index. Note that the coordinate values as displayed in the tibble are rounded, and may look the same for several rows, even when they are not. We can use the `group_indices` function in dplyr to give each group of unique X,Y-combinations an unique index.
+### Step 4: Give each node a unique index
+Each of the nodes in the network needs to get a unique index, such that they can be related to the edges. However, we need to take into account that edges can share either startpoints and/or endpoints. Such duplicated points, that have the same X and Y coordinate, are one single node, and should therefore get the same index. Note that the coordinate values as displayed in the tibble are rounded, and may look the same for several rows, even when they are not. We can use the `group_indices` function in dplyr to give each group of unique X,Y-combinations a unique index.
 
 ```{r}
 nodes <- nodes %>%
@@ -297,15 +298,12 @@ ggplot() +
 Or, alternatively, in only a few lines of code, plot the network as an interactive map.
 
 ```{r, cache = TRUE}
-library(tmap)
-
 tmap_mode('view')
 
 tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
   tm_lines() +
 tm_shape(graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf()) +
-  tm_dots() +
-tmap_options(basemaps = 'OpenStreetMap')
+  tm_dots()
 ```
 
 All nice and well, but these are not things that we necessarily need the graph representation for. The added value of tidygraph, is that it opens the door to the functions of the igraph library, all specifically designed for network analysis, and enables us to use them inside a 'tidy' workflow. To cover them all, we would need to write a book, but let's at least show a few examples below.
@@ -391,8 +389,7 @@ path_graph
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') + 
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.5, col = 'darkgrey') +
-  geom_sf(data = path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), lwd = 1, col = 'magenta') + 
-  geom_sf(data = path_graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 1)
+  geom_sf(data = path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), lwd = 1, col = 'red')
 ```
 
 However, often we will be interested in shortest paths between geographical points that are not necessarily nodes in the network. For example, we might want to calculate the shortest path from the railway station of Münster to the cathedral.
@@ -440,10 +437,10 @@ coords <- nodes %>%
   st_coordinates()
 
 # Calculate nearest points on the network.
-node_index_o = nabor::knn(data = coords, query = coords_o, k = 1)
-node_index_d = nabor::knn(data = coords, query = coords_d, k = 1)
-node_o = nodes[node_index_o$nn.idx, ]
-node_d = nodes[node_index_d$nn.idx, ]
+node_index_o <- knn(data = coords, query = coords_o, k = 1)
+node_index_d <- knn(data = coords, query = coords_d, k = 1)
+node_o <- nodes[node_index_o$nn.idx, ]
+node_d <- nodes[node_index_d$nn.idx, ]
 ```
 
 Like before, we use the ID to calculate the shortest path, and plot it on an interactive map:
@@ -463,12 +460,12 @@ path_graph <- graph %>%
   activate(nodes) %>%
   slice(path$vpath %>% unlist())
 
-path_sf <- path_graph %>% 
-  activate(edges) %>% 
-  as_tibble() %>%
-  st_as_sf()
+tmap_mode('view')
 
-mapview::mapview(path_sf)
+tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
+  tm_lines(lwd = 1) +
+tm_shape(path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
+  tm_lines(col = "red", lwd = 3)
 ```
 
 It worked!
