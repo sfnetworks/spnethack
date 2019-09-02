@@ -1,5 +1,6 @@
 ---
 output: github_document
+always_allow_html: yes
 title: "Spatial networks in R with sf and tidygraph"
 ---
 
@@ -112,9 +113,9 @@ link2GI::linkGRASS7(muenster_center, ver_select = TRUE)
 ```{r, message = FALSE, warning = FALSE, results = FALSE}
 library(rgrass7)
 
-# Add data to GRASS spatial database
+# Add data to GRASS spatial database  
 writeVECT(
-  SDF = as(muenster_center, 'Spatial'), 
+  SDF = muenster_center, 
   vname = 'muenster_center', 
   v.in.ogr_flags = 'overwrite'
 )
@@ -129,9 +130,11 @@ execGRASS(
 )
 
 # Read back into R
+use_sf()
 muenster_center <- readVECT('muenster_cleaned') %>% 
   st_as_sf() %>%
   st_cast('LINESTRING') %>%
+  rename(geometry = geom) %>%
   select(-cat)
 ```
 ```{r}
@@ -357,12 +360,12 @@ The function 'shortest_paths' not only returns distances, but also the indices o
 ```{r}
 from_node <- graph %>%
   activate(nodes) %>%
-  filter(nodeID == 2404) %>%
+  filter(nodeID == 3284) %>%
   pull(nodeID)
 
 to_node <- graph %>%
   activate(nodes) %>%
-  filter(nodeID == 1679) %>%
+  filter(nodeID == 3305) %>%
   pull(nodeID)
 
 path <- shortest_paths(
@@ -397,7 +400,9 @@ ggplot() +
 However, often we will be interested in shortest paths between geographical points that are not necessarily nodes in the network. For example, we might want to calculate the shortest path from the railway station of Münster to the cathedral.
 
 ```{r}
-muenster_station <- st_point(c(7.6349, 51.9566)) %>% st_sfc(crs = 4326) %>% st_coordinates()
+muenster_station <- st_point(c(7.6349, 51.9566)) %>% 
+  st_sfc(crs = 4326) %>%
+  st_coordinates()
 
 muenster_station
 
