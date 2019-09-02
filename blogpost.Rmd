@@ -21,7 +21,7 @@ Although R was originally designed as a language for statistical computing, an a
 Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf) (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial) of Geocomputation with R for a brief history).
 Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph), which is based on  [igraph](https://igraph.org/).
 
-Both sf and tidygraph support the the `tibble` class and the broader 'tidy' approach to data science, which involves data processing pipelines, type stability and a convention of representing everything as a data frame (well a `tibble`, which is a data frame with user friendly default settings).
+Both sf and tidygraph support the `tibble` class and the broader 'tidy' approach to data science, which involves data processing pipelines, type stability and a convention of representing everything as a data frame (well a `tibble`, which is a data frame with user friendly default settings).
 In sf, this means storing spatial vector data as objects of class `sf`, which are essentially the same as a regular data frame (or tibble), but with an additional 'sticky' list column containing a geometry for each feature (row), and attributes such as bounding box and CRS.
 Tidygraph stores networks in objects of class `tbl_graph`. A `tbl_graph` is an `igraph` object, but enables the user to manipulate both the edges and nodes elements as if they were data frames also.
 
@@ -141,7 +141,7 @@ muenster_center
 ```
 
 ### Step 2: Give each edge a unique index
-The edges of the network, are simply the linestrings in the data. Each of them gets a unique index, which can be later be related to their start and end node.
+The edges of the network, are simply the linestrings in the data. Each of them gets a unique index, which can later be related to their start and end node.
 
 ```{r}
 edges <- muenster_center %>%
@@ -151,7 +151,7 @@ edges
 ```
 
 ### Step 3: Create nodes at the start and end point of each edge
-The nodes of the network, are the start and end points of the edges. The locations of these points can be derived by using the `st_coordinates` function in sf. When given a set of linestrings, this function breaks down each of them into the points they are build up. It returns a matrix with the X and Y coordinates of those points, and additionally an integer indicator L1 specifying to which line a point belongs. These integer indicators correspond to the edge indices defined in step 1. That is, if we convert the matrix into a `data.frame` or `tibble`, group the features by the edge index, and only keep the first and last feature of each group, we have the start and end points of the linestrings.
+The nodes of the network, are the start and end points of the edges. The locations of these points can be derived by using the `st_coordinates` function in sf. When given a set of linestrings, this function breaks down each of them into the points they are built up from. It returns a matrix with the X and Y coordinates of those points, and additionally an integer indicator L1 specifying to which line a point belongs. These integer indicators correspond to the edge indices defined in step 1. That is, if we convert the matrix into a `data.frame` or `tibble`, group the features by the edge index, and only keep the first and last feature of each group, we have the start and end points of the linestrings.
 
 ```{r}
 nodes <- edges %>%
@@ -179,7 +179,7 @@ nodes
 ```
 
 ### Step 5: Combine the node indices with the edges
-Now each of the start and endpoints from step has been assigned a node ID in step 4, we can add the node indices to the edges. In other words, we can specify for each edge, in which node it starts, and in which node it ends.
+Now each of the start and endpoints have been assigned a node ID in step 4, so that we can add the node indices to the edges. In other words, we can specify for each edge, in which node it starts, and in which node it ends.
 
 ```{r}
 source_nodes <- nodes %>%
@@ -219,7 +219,7 @@ graph
 ```
 
 ### Step 8: Putting it together
-For make the approach more convenient, we can combine all steps above into a single function, that takes a cleaned `sf` object with `LINESTRING` geometries as input, and returns a spatial `tbl_graph`.
+To make the approach more convenient, we can combine all steps above into a single function, that takes a cleaned `sf` object with `LINESTRING` geometries as input, and returns a spatial `tbl_graph`.
 
 ```{r}
 sf_to_tidygraph = function(x, directed = TRUE) {
@@ -333,8 +333,9 @@ ggplot() +
 
 ```{r, cache = TRUE}
 ggplot() +
-  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness), lwd = 1) +
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, lwd = betweenness)) +
   scale_colour_viridis_c(option = 'inferno')
+## Hard to see the lines, maybe if the 'lwd' is set to the betweenness as well
 ```
 
 ### Shortest paths
