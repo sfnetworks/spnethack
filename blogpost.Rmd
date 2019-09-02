@@ -1,5 +1,5 @@
 ---
-output: html_document
+output: github_document
 title: "Spatial networks in R with sf and tidygraph"
 ---
 
@@ -9,9 +9,9 @@ Street networks, shipping routes, telecommunication lines, river bassins. All ex
 
 Such spatial networks can be analyzed using graph theory. Not for nothing, Leonhard Eulers famous work on the [Seven Bridges of Köningsberg](https://www.mathsisfun.com/activity/seven-bridges-konigsberg.html), which laid the foundations of graph theory and network analysis, was in essence a spatial problem.
 
-In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. However, as we learned from this [github issue](https://github.com/r-spatial/sf/issues/966) and this [tweet](https://twitter.com/zevross/status/1089908839816794118), what lacks is one general and modern way to store spatial networks, which can serve as a solid base for further analysis.
+In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. However, as we learned from this [github issue](https://github.com/r-spatial/sf/issues/966) and this [tweet](https://twitter.com/zevross/status/1089908839816794118), concensus on how best to represent and analyse spatial networks has proved elusive.
 
-In this blogpost, we will take a first step in this, and provide an approach that starts with a set of geographic lines, and leads to an object ready to be used for network analysis. Along the way, we will see that there are still steps to take before the process of analyzing spatial networks in R is clear, modern and efficient.
+Rhis blogpost takes a first step in this direction, demonstrating an approach that starts with a set of geographic lines, and leads to an object ready to be used for network analysis. Along the way, we will see that there are still steps to take before the process of analyzing spatial networks in R is clear, modern and efficient.
 
 ## Existing R packages for spatial networks
 
@@ -99,7 +99,7 @@ To perform network analysis, we need a network with a clean topology. In theory,
 
 Here, we will clean the network topology by breaking lines at intersections and also breaking lines that form a collapsed loop. This will be followed by a removal of duplicated geometry features. Once done, we will read the data back into R, and convert again into an `sf` object with `LINESTRING` geometry.
 
-```{r, eval = FALSE}
+```{r, eval=TRUE}
 # Link tot GRASS GIS
 link2GI::linkGRASS7(muenster_center, ver_select = TRUE)
 ```
