@@ -847,7 +847,7 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 82/3321 vertices, from 328521a:
+    ## + 82/3321 vertices, from 5abbf12:
     ##  [1] 3284 2816 2903 2311 1384  226 2037  445  446  946  368  367 2841 2290
     ## [15] 2241 2394  152 1510 3013 3012 2948 2393 1203 1720 1199 3085 1196 1192
     ## [29]  552 1578 1187 1184 2126 1178 2127   59 1926  920 3162 2136 1903 1904
@@ -860,7 +860,7 @@ path$epath
 ```
 
     ## [[1]]
-    ## + 81/4680 edges from 328521a:
+    ## + 81/4680 edges from 5abbf12:
     ##  [1] 2816--3284 2816--2903 2311--2903 1384--2311  226--1384  226--2037
     ##  [7]  445--2037  445-- 446  446-- 946  368-- 946  367-- 368  367--2841
     ## [13] 2290--2841 2241--2290 2241--2394  152--2394  152--1510 1510--3013
@@ -923,25 +923,35 @@ station of Münster to the cathedral.
 
 ``` r
 muenster_station <- st_point(c(7.6349, 51.9566)) %>% 
-  st_sfc(crs = 4326) %>%
-  st_coordinates()
+  st_sfc(crs = 4326)
 
 muenster_station
 ```
 
-    ##        X       Y
-    ## 1 7.6349 51.9566
+    ## Geometry set for 1 feature 
+    ## geometry type:  POINT
+    ## dimension:      XY
+    ## bbox:           xmin: 7.6349 ymin: 51.9566 xmax: 7.6349 ymax: 51.9566
+    ## epsg (SRID):    4326
+    ## proj4string:    +proj=longlat +datum=WGS84 +no_defs
+
+    ## POINT (7.6349 51.9566)
 
 ``` r
 muenster_cathedral <- st_point(c(7.626, 51.962)) %>%
-  st_sfc(crs = 4326) %>%
-  st_coordinates()
+  st_sfc(crs = 4326)
 
 muenster_cathedral
 ```
 
-    ##       X      Y
-    ## 1 7.626 51.962
+    ## Geometry set for 1 feature 
+    ## geometry type:  POINT
+    ## dimension:      XY
+    ## bbox:           xmin: 7.626 ymin: 51.962 xmax: 7.626 ymax: 51.962
+    ## epsg (SRID):    4326
+    ## proj4string:    +proj=longlat +datum=WGS84 +no_defs
+
+    ## POINT (7.626 51.962)
 
 ``` r
 coords_o = matrix(muenster_station, ncol = 2)
@@ -949,12 +959,32 @@ coords_d = matrix(muenster_cathedral, ncol = 2)
 ```
 
 To find the route on the network, we must first identify the nearest
-points on the network.
+points on the network. The `nabor` package has a well performing
+function to do so. It does, however, require the coordinates of the
+origin and destination nodes to be given in a matrix.
 
 ``` r
-nodes_coords = st_coordinates(nodes)
-node_index_o = nabor::knn(data = nodes_coords, query = coords_o, k = 1)
-node_index_d = nabor::knn(data = nodes_coords, query = coords_d, k = 1)
+# Coordinates of the origin and destination node, as matrix
+coords_o <- muenster_station %>%
+  st_coordinates() %>%
+  matrix(ncol = 2)
+
+coords_d <- muenster_cathedral %>%
+  st_coordinates() %>%
+  matrix(ncol = 2)
+
+# Coordinates of all nodes in the network
+nodes <- graph %>%
+  activate(nodes) %>%
+  as_tibble() %>%
+  st_as_sf()
+
+coords <- nodes %>%
+  st_coordinates()
+
+# Calculate nearest points on the network.
+node_index_o = nabor::knn(data = coords, query = coords_o, k = 1)
+node_index_d = nabor::knn(data = coords, query = coords_d, k = 1)
 node_o = nodes[node_index_o$nn.idx, ]
 node_d = nodes[node_index_d$nn.idx, ]
 ```
@@ -974,7 +1004,7 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 58/3321 vertices, from 328521a:
+    ## + 58/3321 vertices, from 5abbf12:
     ##  [1] 1344 2671 2320 1209 1208 2775 2779 3045 1898 2433 2090 2091 2915 2092
     ## [15]  266 1585 2093 2094 2592   10    9 2640 2641   13   14 2210 1471 2860
     ## [29] 2858 2859 2423  528 2519 3021 2954  930 1884 1895 1894 1521 1522 2518
@@ -986,7 +1016,7 @@ path$epath
 ```
 
     ## [[1]]
-    ## + 57/4680 edges from 328521a:
+    ## + 57/4680 edges from 5abbf12:
     ##  [1] 1344--2671 2320--2671 1209--2320 1208--1209 1208--2775 2775--2779
     ##  [7] 2779--3045 1898--3045 1898--2433 2090--2433 2090--2091 2091--2915
     ## [13] 2092--2915  266--2092  266--1585 1585--2093 2093--2094 2094--2592
@@ -1005,7 +1035,7 @@ path_graph <- graph %>%
   activate(nodes) %>%
   slice(path$vpath %>% unlist())
 
-path_sf = path_graph %>% 
+path_sf <- path_graph %>% 
   activate(edges) %>% 
   as_tibble() %>%
   st_as_sf()

@@ -40,7 +40,7 @@ The remainder of this post outlines an approach that combines `sf` and `igraph` 
 The following code chunk will install the packages used in this post:
 
 ```{r, eval=FALSE, message=FALSE}
-# we'll use remotes to install packages, install it if needs be:
+# We'll use remotes to install packages, install it if needs be:
 if(!"remotes" %in% installed.packages()) {
   install.packages("remotes")
 }
@@ -50,16 +50,14 @@ cran_pkgs = c(
   "tidygraph",
   "igraph",
   "osmdata",
-  "dodgr",
-  "stplanr",
   "dplyr",
   "tibble",
   "ggplot2",
   "units",
-  "piggyback",
   "tmap",
   "rgrass7",
-  "link2GI"
+  "link2GI",
+  "nabor"
 )
 
 remotes::install_cran(cran_pkgs)
@@ -360,7 +358,7 @@ The function 'shortest_paths' not only returns distances, but also the indices o
 ```{r}
 from_node <- graph %>%
   activate(nodes) %>%
-  filter(nodeID == 3284) %>%
+  filter(nodeID == 3285) %>%
   pull(nodeID)
 
 to_node <- graph %>%
@@ -401,42 +399,54 @@ However, often we will be interested in shortest paths between geographical poin
 
 ```{r}
 muenster_station <- st_point(c(7.6349, 51.9566)) %>% 
-  st_sfc(crs = 4326) %>%
-  st_coordinates()
+  st_sfc(crs = 4326)
 
 muenster_station
 
 muenster_cathedral <- st_point(c(7.626, 51.962)) %>%
-  st_sfc(crs = 4326) %>%
-  st_coordinates()
+  st_sfc(crs = 4326)
 
 muenster_cathedral
-
-coords_o = matrix(muenster_station, ncol = 2)
-coords_d = matrix(muenster_cathedral, ncol = 2)
 ```
 
+<!-- ```{r, eval=FALSE, echo=FALSE} -->
+<!-- text_o = "Muenster domplatz" -->
+<!-- text_d = "Muenster railway station" -->
+<!-- list_o = tmaptools::geocode_OSM(text_o) -->
+<!-- list_d = tmaptools::geocode_OSM(text_d) -->
+<!-- coords_o = matrix(list_o$coords, ncol = 2) -->
+<!-- coords_d = matrix(list_d$coords, ncol = 2) -->
+<!-- ``` -->
 
-```{r, eval=FALSE, echo=FALSE}
-text_o = "Muenster domplatz"
-text_d = "Muenster railway station"
-list_o = tmaptools::geocode_OSM(text_o)
-list_d = tmaptools::geocode_OSM(text_d)
-coords_o = matrix(list_o$coords, ncol = 2)
-coords_d = matrix(list_d$coords, ncol = 2)
-```
-
-To find the route on the network, we must first identify the nearest points on the network.
+To find the route on the network, we must first identify the nearest points on the network. The `nabor` package has a well performing function to do so. It does, however, require the coordinates of the origin and destination nodes to be given in a matrix.
 
 ```{r}
-nodes_coords = st_coordinates(nodes)
-node_index_o = nabor::knn(data = nodes_coords, query = coords_o, k = 1)
-node_index_d = nabor::knn(data = nodes_coords, query = coords_d, k = 1)
+# Coordinates of the origin and destination node, as matrix
+coords_o <- muenster_station %>%
+  st_coordinates() %>%
+  matrix(ncol = 2)
+
+coords_d <- muenster_cathedral %>%
+  st_coordinates() %>%
+  matrix(ncol = 2)
+
+# Coordinates of all nodes in the network
+nodes <- graph %>%
+  activate(nodes) %>%
+  as_tibble() %>%
+  st_as_sf()
+
+coords <- nodes %>%
+  st_coordinates()
+
+# Calculate nearest points on the network.
+node_index_o = nabor::knn(data = coords, query = coords_o, k = 1)
+node_index_d = nabor::knn(data = coords, query = coords_d, k = 1)
 node_o = nodes[node_index_o$nn.idx, ]
 node_d = nodes[node_index_d$nn.idx, ]
 ```
 
-Like before, we use the ID to calculate the shortest path:
+Like before, we use the ID to calculate the shortest path, and plot it on an interactive map:
 
 ```{r}
 path <- shortest_paths(
@@ -447,20 +457,17 @@ path <- shortest_paths(
   weights = graph %>% activate(edges) %>% pull(length)
 )
 
-path$vpath
-
-path$epath
-
 path_graph <- graph %>%
   activate(edges) %>%
   slice(path$epath %>% unlist()) %>%
   activate(nodes) %>%
   slice(path$vpath %>% unlist())
 
-path_sf = path_graph %>% 
+path_sf <- path_graph %>% 
   activate(edges) %>% 
   as_tibble() %>%
   st_as_sf()
+
 mapview::mapview(path_sf)
 ```
 
