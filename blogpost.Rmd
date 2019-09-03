@@ -293,7 +293,7 @@ ggplot() +
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.5)
 ```
 
-Or, alternatively, in only a few lines of code, plot the network as an interactive map.
+Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/map.html), you should be able to really interact with it!
 
 ```{r, cache = TRUE, message = FALSE}
 tmap_mode('view')
