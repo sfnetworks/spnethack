@@ -667,7 +667,7 @@ ggplot() +
 
 Or, alternatively, in only a few lines of code, plot the network as an
 interactive map. On this page, the interactive map might show as an
-image, but [here](https://luukvdmeer.github.io/spnethack/map.html), you
+image, but [here](https://luukvdmeer.github.io/spnethack/imap.html), you
 should be able to really interact with it\!
 
 ``` r
@@ -676,7 +676,8 @@ tmap_mode('view')
 tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
   tm_lines() +
 tm_shape(graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf()) +
-  tm_dots()
+  tm_dots() +
+tmap_options(basemaps = 'OpenStreetMap')
 ```
 
 ![](blogpost_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
@@ -819,7 +820,7 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 82/3321 vertices, from 7b64a1c:
+    ## + 82/3321 vertices, from e2aabc5:
     ##  [1] 3284 2822 2905 2310 1382  226 2035  445  446  946  368  367 2848 2289
     ## [15] 2239 2393  152 1508 3014 3013 2951 2392 1201 1719 1197 3085 1194 1190
     ## [29]  552 1577 1185 1182 2124 1176 2125   59 1925  920 3162 2134 1902 1903
@@ -832,7 +833,7 @@ path$epath
 ```
 
     ## [[1]]
-    ## + 81/4681 edges from 7b64a1c:
+    ## + 81/4681 edges from e2aabc5:
     ##  [1] 2822--3284 2822--2905 2310--2905 1382--2310  226--1382  226--2035
     ##  [7]  445--2035  445-- 446  446-- 946  368-- 946  367-- 368  367--2848
     ## [13] 2289--2848 2239--2289 2239--2393  152--2393  152--1508 1508--3014

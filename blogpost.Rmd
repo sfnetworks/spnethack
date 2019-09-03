@@ -293,7 +293,7 @@ ggplot() +
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.5)
 ```
 
-Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/map.html), you should be able to really interact with it!
+Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/imap.html), you should be able to really interact with it!
 
 ```{r, cache = TRUE, message = FALSE}
 tmap_mode('view')
@@ -301,7 +301,8 @@ tmap_mode('view')
 tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
   tm_lines() +
 tm_shape(graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf()) +
-  tm_dots()
+  tm_dots() +
+tmap_options(basemaps = 'OpenStreetMap')
 ```
 
 All nice and well, but these are not things that we necessarily need the graph representation for. The added value of tidygraph, is that it opens the door to the functions of the igraph library, all specifically designed for network analysis, and enables us to use them inside a 'tidy' workflow. To cover them all, we would need to write a book, but let's at least show a few examples below.
