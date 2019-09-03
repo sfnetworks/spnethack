@@ -2,6 +2,7 @@
 output: github_document
 always_allow_html: yes
 title: "Spatial networks in R with sf and tidygraph"
+author: "Lorena Abad, Robin Lovelace & Lucas van der Meer"
 ---
 
 ## Introduction
