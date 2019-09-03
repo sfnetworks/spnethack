@@ -43,18 +43,17 @@ packages for graph representation and analysis have been developed,
 notably [tidygraph](https://github.com/thomasp85/tidygraph), which is
 based on [igraph](https://igraph.org/).
 
-Both sf and tidygraph support the the `tibble` class and the broader
-‘tidy’ approach to data science, which involves data processing
-pipelines, type stability and a convention of representing everything as
-a data frame (well a `tibble`, which is a data frame with user friendly
-default settings). In sf, this means storing spatial vector data as
-objects of class `sf`, which are essentially the same as a regular data
-frame (or tibble), but with an additional ‘sticky’ list column
-containing a geometry for each feature (row), and attributes such as
-bounding box and CRS. Tidygraph stores networks in objects of class
-`tbl_graph`. A `tbl_graph` is an `igraph` object, but enables the user
-to manipulate both the edges and nodes elements as if they were data
-frames also.
+Both sf and tidygraph support the `tibble` class and the broader ‘tidy’
+approach to data science, which involves data processing pipelines, type
+stability and a convention of representing everything as a data frame
+(well a `tibble`, which is a data frame with user friendly default
+settings). In sf, this means storing spatial vector data as objects of
+class `sf`, which are essentially the same as a regular data frame (or
+tibble), but with an additional ‘sticky’ list column containing a
+geometry for each feature (row), and attributes such as bounding box and
+CRS. Tidygraph stores networks in objects of class `tbl_graph`. A
+`tbl_graph` is an `igraph` object, but enables the user to manipulate
+both the edges and nodes elements as if they were data frames also.
 
 Both sf and tidygraph are relatively new packages (first released on
 CRAN in 2016 and 2017, respectively). It is unsurprising, therefore,
@@ -153,7 +152,7 @@ muenster_center <- muenster$osm_lines %>%
 muenster_center
 ```
 
-    ## Simple feature collection with 2194 features and 1 field
+    ## Simple feature collection with 2193 features and 1 field
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -198,7 +197,11 @@ GIS installed on your computer. For an in depth description of combining
 R with open source GIS software, see
 [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of
 Geocomputation with R. Take into account that the linking process may
-take up some time, especially on Windows operating systems.
+take up some time, especially on Windows operating systems. Also, note
+that there have been some large changes recently to the `rgrass7`
+package, which enabled a better integration with `sf`. However, it also
+means that the code below will not work when using an older version of
+`rgrass7`, so make sure to update if needed.
 
 Here, we will clean the network topology by breaking lines at
 intersections and also breaking lines that form a collapsed loop. This
@@ -230,9 +233,7 @@ execGRASS(
 
 # Read back into R
 use_sf()
-muenster_center <- readVECT('muenster_cleaned') %>% 
-  st_as_sf() %>%
-  st_cast('LINESTRING') %>%
+muenster_center <- readVECT('muenster_cleaned') %>%
   rename(geometry = geom) %>%
   select(-cat)
 ```
@@ -241,7 +242,7 @@ muenster_center <- readVECT('muenster_cleaned') %>%
 muenster_center
 ```
 
-    ## Simple feature collection with 4680 features and 1 field
+    ## Simple feature collection with 4681 features and 1 field
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -263,8 +264,8 @@ muenster_center
 ### Step 2: Give each edge a unique index
 
 The edges of the network, are simply the linestrings in the data. Each
-of them gets a unique index, which can be later be related to their
-start and end node.
+of them gets a unique index, which can later be related to their start
+and end node.
 
 ``` r
 edges <- muenster_center %>%
@@ -273,7 +274,7 @@ edges <- muenster_center %>%
 edges
 ```
 
-    ## Simple feature collection with 4680 features and 2 fields
+    ## Simple feature collection with 4681 features and 2 fields
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -297,8 +298,8 @@ edges
 The nodes of the network, are the start and end points of the edges. The
 locations of these points can be derived by using the `st_coordinates`
 function in sf. When given a set of linestrings, this function breaks
-down each of them into the points they are build up. It returns a matrix
-with the X and Y coordinates of those points, and additionally an
+down each of them into the points they are built up from. It returns a
+matrix with the X and Y coordinates of those points, and additionally an
 integer indicator L1 specifying to which line a point belongs. These
 integer indicators correspond to the edge indices defined in step 1.
 That is, if we convert the matrix into a `data.frame` or `tibble`, group
@@ -318,7 +319,7 @@ nodes <- edges %>%
 nodes
 ```
 
-    ## # A tibble: 9,360 x 4
+    ## # A tibble: 9,362 x 4
     ##        X     Y edgeID start_end
     ##    <dbl> <dbl>  <dbl> <chr>    
     ##  1  7.63  52.0      1 start    
@@ -331,7 +332,7 @@ nodes
     ##  8  7.63  52.0      4 end      
     ##  9  7.63  52.0      5 start    
     ## 10  7.63  52.0      5 end      
-    ## # … with 9,350 more rows
+    ## # … with 9,352 more rows
 
 ### Step 4: Give each node a unique index
 
@@ -354,7 +355,7 @@ nodes <- nodes %>%
 nodes
 ```
 
-    ## # A tibble: 9,360 x 5
+    ## # A tibble: 9,362 x 5
     ##        X     Y edgeID start_end nodeID
     ##    <dbl> <dbl>  <dbl> <chr>      <int>
     ##  1  7.63  52.0      1 start          1
@@ -367,14 +368,14 @@ nodes
     ##  8  7.63  52.0      4 end            8
     ##  9  7.63  52.0      5 start          9
     ## 10  7.63  52.0      5 end           10
-    ## # … with 9,350 more rows
+    ## # … with 9,352 more rows
 
 ### Step 5: Combine the node indices with the edges
 
-Now each of the start and endpoints from step has been assigned a node
-ID in step 4, we can add the node indices to the edges. In other words,
-we can specify for each edge, in which node it starts, and in which node
-it ends.
+Now each of the start and endpoints have been assigned a node ID in step
+4, so that we can add the node indices to the edges. In other words, we
+can specify for each edge, in which node it starts, and in which node it
+ends.
 
 ``` r
 source_nodes <- nodes %>%
@@ -391,7 +392,7 @@ edges = edges %>%
 edges
 ```
 
-    ## Simple feature collection with 4680 features and 4 fields
+    ## Simple feature collection with 4681 features and 4 fields
     ## geometry type:  LINESTRING
     ## dimension:      XY
     ## bbox:           xmin: 7.601942 ymin: 51.94823 xmax: 7.645597 ymax: 51.97241
@@ -475,7 +476,7 @@ graph = tbl_graph(nodes = nodes, edges = as_tibble(edges), directed = FALSE)
 graph
 ```
 
-    ## # A tbl_graph: 3321 nodes and 4680 edges
+    ## # A tbl_graph: 3321 nodes and 4681 edges
     ## #
     ## # An undirected multigraph with 33 components
     ## #
@@ -490,17 +491,17 @@ graph
     ## 6      6  (7.629308 51.9673)
     ## # … with 3,315 more rows
     ## #
-    ## # Edge Data: 4,680 x 5
+    ## # Edge Data: 4,681 x 5
     ##    from    to highway                                       geometry edgeID
     ##   <int> <int> <fct>                                 <LINESTRING [°]>  <int>
     ## 1     1     2 service           (7.63275 51.9603, 7.631843 51.96061)      1
     ## 2     3     4 seconda…        (7.614156 51.96724, 7.613797 51.96723)      2
     ## 3     5     6 footway  (7.629304 51.96712, 7.629304 51.96717, 7.629…      3
-    ## # … with 4,677 more rows
+    ## # … with 4,678 more rows
 
 ### Step 8: Putting it together
 
-For make the approach more convenient, we can combine all steps above
+To make the approach more convenient, we can combine all steps above
 into a single function, that takes a cleaned `sf` object with
 `LINESTRING` geometries as input, and returns a spatial `tbl_graph`.
 
@@ -546,7 +547,7 @@ sf_to_tidygraph = function(x, directed = TRUE) {
 sf_to_tidygraph(muenster_center, directed = FALSE)
 ```
 
-    ## # A tbl_graph: 3321 nodes and 4680 edges
+    ## # A tbl_graph: 3321 nodes and 4681 edges
     ## #
     ## # An undirected multigraph with 33 components
     ## #
@@ -561,13 +562,13 @@ sf_to_tidygraph(muenster_center, directed = FALSE)
     ## 6      6  (7.629308 51.9673)
     ## # … with 3,315 more rows
     ## #
-    ## # Edge Data: 4,680 x 5
+    ## # Edge Data: 4,681 x 5
     ##    from    to highway                                       geometry edgeID
     ##   <int> <int> <fct>                                 <LINESTRING [°]>  <int>
     ## 1     1     2 service           (7.63275 51.9603, 7.631843 51.96061)      1
     ## 2     3     4 seconda…        (7.614156 51.96724, 7.613797 51.96723)      2
     ## 3     5     6 footway  (7.629304 51.96712, 7.629304 51.96717, 7.629…      3
-    ## # … with 4,677 more rows
+    ## # … with 4,678 more rows
 
 ## Combining the best of both worlds
 
@@ -590,11 +591,11 @@ graph <- graph %>%
 graph
 ```
 
-    ## # A tbl_graph: 3321 nodes and 4680 edges
+    ## # A tbl_graph: 3321 nodes and 4681 edges
     ## #
     ## # An undirected multigraph with 33 components
     ## #
-    ## # Edge Data: 4,680 x 6 (active)
+    ## # Edge Data: 4,681 x 6 (active)
     ##    from    to highway                              geometry edgeID   length
     ##   <int> <int> <fct>                        <LINESTRING [°]>  <int>      [m]
     ## 1     1     2 service   (7.63275 51.9603, 7.631843 51.9606…      1 71.2778…
@@ -603,7 +604,7 @@ graph
     ## 4     7     8 steps     (7.627696 51.96534, 7.62765 51.965…      4  3.2926…
     ## 5     9    10 unclassi… (7.631499 51.95741, 7.63155 51.957…      5  4.2437…
     ## 6    11    12 service   (7.633612 51.96548, 7.633578 51.96…      6  7.4291…
-    ## # … with 4,674 more rows
+    ## # … with 4,675 more rows
     ## #
     ## # Node Data: 3,321 x 2
     ##   nodeID            geometry
@@ -626,9 +627,6 @@ graph %>%
   summarise(length = sum(length))
 ```
 
-    ## Warning: Factor `highway` contains implicit NA, consider using
-    ## `forcats::fct_explicit_na`
-
     ## Simple feature collection with 17 features and 2 fields
     ## geometry type:  MULTILINESTRING
     ## dimension:      XY
@@ -640,9 +638,9 @@ graph %>%
     ##  * <fct>              [m]                             <MULTILINESTRING [°]>
     ##  1 corridor        9.377… ((7.620506 51.96262, 7.620542 51.96266), (7.6205…
     ##  2 cycleway    22807.075… ((7.619683 51.95395, 7.619641 51.95378, 7.619559…
-    ##  3 footway     42923.233… ((7.640529 51.95325, 7.640528 51.95323), (7.6405…
+    ##  3 footway     42923.310… ((7.640529 51.95325, 7.640528 51.95323), (7.6405…
     ##  4 path         7642.403… ((7.624007 51.95379, 7.624223 51.95378, 7.624253…
-    ##  5 pedestrian  11439.762… ((7.620362 51.95471, 7.620477 51.9547), (7.62012…
+    ##  5 pedestrian  11438.081… ((7.620362 51.95471, 7.620477 51.9547), (7.62012…
     ##  6 primary      3539.164… ((7.625556 51.95272, 7.625594 51.95284, 7.625714…
     ##  7 primary_li…   184.385… ((7.617285 51.96609, 7.617286 51.96624, 7.617295…
     ##  8 residential 22712.272… ((7.614509 51.95351, 7.614554 51.95346), (7.6326…
@@ -716,26 +714,26 @@ graph <- graph %>%
 graph
 ```
 
-    ## # A tbl_graph: 3321 nodes and 4680 edges
+    ## # A tbl_graph: 3321 nodes and 4681 edges
     ## #
     ## # An undirected multigraph with 33 components
     ## #
-    ## # Edge Data: 4,680 x 7 (active)
+    ## # Edge Data: 4,681 x 7 (active)
     ##    from    to highway                  geometry edgeID   length betweenness
     ##   <int> <int> <fct>            <LINESTRING [°]>  <int>      [m]       <dbl>
-    ## 1     1     2 service (7.63275 51.9603, 7.6318…      1 71.2778…       95167
+    ## 1     1     2 service (7.63275 51.9603, 7.6318…      1 71.2778…       95176
     ## 2     3     4 second… (7.614156 51.96724, 7.61…      2 24.7146…       33254
-    ## 3     5     6 footway (7.629304 51.96712, 7.62…      3 20.0122…       21928
-    ## 4     7     8 steps   (7.627696 51.96534, 7.62…      4  3.2926…       82719
-    ## 5     9    10 unclas… (7.631499 51.95741, 7.63…      5  4.2437…      516313
-    ## 6    11    12 service (7.633612 51.96548, 7.63…      6  7.4291…       17044
-    ## # … with 4,674 more rows
+    ## 3     5     6 footway (7.629304 51.96712, 7.62…      3 20.0122…       21905
+    ## 4     7     8 steps   (7.627696 51.96534, 7.62…      4  3.2926…       82674
+    ## 5     9    10 unclas… (7.631499 51.95741, 7.63…      5  4.2437…      518172
+    ## 6    11    12 service (7.633612 51.96548, 7.63…      6  7.4291…       17053
+    ## # … with 4,675 more rows
     ## #
     ## # Node Data: 3,321 x 4
     ##   nodeID            geometry degree betweenness
     ##    <int>         <POINT [°]>  <dbl>       <dbl>
-    ## 1      1   (7.63275 51.9603)      3      122003
-    ## 2      2 (7.631843 51.96061)      3       99757
+    ## 1      1   (7.63275 51.9603)      3      122014
+    ## 2      2 (7.631843 51.96061)      3       99760
     ## 3      3 (7.614156 51.96724)      3       33188
     ## # … with 3,318 more rows
 
@@ -750,7 +748,7 @@ ggplot() +
 
 ``` r
 ggplot() +
-  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness), lwd = 1) +
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, lwd = betweenness)) +
   scale_colour_viridis_c(option = 'inferno')
 ```
 
@@ -823,30 +821,30 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 81/3321 vertices, from 1797457:
-    ##  [1] 3285 2315 1148 2411 2891 2890 1980 1979 1902 2408  448 3151 2840 1869
-    ## [15] 2072  152 1510 3013 3012 2948 2393 1203 1720 1199 3085 1196 1192  552
-    ## [29] 1578 1187 1184 2126 1178 2127   59 1926  920 3162 2136 1903 1904  330
-    ## [43] 1905   26   27 1962 1456 1457 1458 1459 1689 1912 1464   24   25 3073
-    ## [57]  753  756 1075 1477 1478 2691 2690 3061 1660  830 1657 1656 2848   11
-    ## [71] 1641 1093 1094   99 1236  101  100  275 3154 3163 3305
+    ## + 81/3321 vertices, from 9dfd9b2:
+    ##  [1] 3285 2314 1146 2410 2893 2892 1979 1978 1901 2407  448 3151 2847 1868
+    ## [15] 2070  152 1508 3014 3013 2951 2392 1201 1719 1197 3085 1194 1190  552
+    ## [29] 1577 1185 1182 2124 1176 2125   59 1925  920 3162 2134 1902 1903  330
+    ## [43] 1904   26   27 1961 1454 1455 1456 1457 1688 1911 1462   24   25 3073
+    ## [57]  753  756 1073 1475 1476 2693 2692 3061 1659  830 1656 1655 2854   11
+    ## [71] 1640 1091 1092   99 1234  101  100  275 3154 3163 3305
 
 ``` r
 path$epath
 ```
 
     ## [[1]]
-    ## + 80/4680 edges from 1797457:
-    ##  [1] 2315--3285 1148--2315 1148--2411 2411--2891 2890--2891 1980--2890
-    ##  [7] 1979--1980 1902--1979 1902--2408  448--2408  448--3151 2840--3151
-    ## [13] 1869--2840 1869--2072  152--2072  152--1510 1510--3013 3012--3013
-    ## [19] 2948--3012 2393--2948 1203--2393 1203--1720 1199--1720 1199--3085
-    ## [25] 1196--3085 1192--1196  552--1192  552--1578 1187--1578 1184--1187
-    ## [31] 1184--2126 1178--2126 1178--2127   59--2127   59--1926  920--1926
-    ## [37]  920--3162 2136--3162 1903--2136 1903--1904  330--1904  330--1905
-    ## [43]   26--1905   26--  27   27--1962 1456--1962 1456--1457 1457--1458
-    ## [49] 1458--1459 1459--1689 1689--1912 1464--1912   24--1464   24--  25
-    ## [55]   25--3073  753--3073  753-- 756  756--1075 1075--1477 1477--1478
+    ## + 80/4681 edges from 9dfd9b2:
+    ##  [1] 2314--3285 1146--2314 1146--2410 2410--2893 2892--2893 1979--2892
+    ##  [7] 1978--1979 1901--1978 1901--2407  448--2407  448--3151 2847--3151
+    ## [13] 1868--2847 1868--2070  152--2070  152--1508 1508--3014 3013--3014
+    ## [19] 2951--3013 2392--2951 1201--2392 1201--1719 1197--1719 1197--3085
+    ## [25] 1194--3085 1190--1194  552--1190  552--1577 1185--1577 1182--1185
+    ## [31] 1182--2124 1176--2124 1176--2125   59--2125   59--1925  920--1925
+    ## [37]  920--3162 2134--3162 1902--2134 1902--1903  330--1903  330--1904
+    ## [43]   26--1904   26--  27   27--1961 1454--1961 1454--1455 1455--1456
+    ## [49] 1456--1457 1457--1688 1688--1911 1462--1911   24--1462   24--  25
+    ## [55]   25--3073  753--3073  753-- 756  756--1073 1073--1475 1475--1476
     ## + ... omitted several edges
 
 ``` r
@@ -866,19 +864,19 @@ path_graph
     ## # Node Data: 81 x 4 (active)
     ##   nodeID            geometry degree betweenness
     ##    <int>         <POINT [°]>  <dbl>       <dbl>
-    ## 1     11 (7.633612 51.96548)      4      107952
-    ## 2     24  (7.62837 51.96292)      4      432242
-    ## 3     25 (7.628317 51.96308)      3      506005
-    ## 4     26 (7.626123 51.96065)      3      725053
-    ## 5     27 (7.626309 51.96067)      3      653247
-    ## 6     59 (7.623359 51.95995)      3      544664
+    ## 1     11 (7.633612 51.96548)      4      107917
+    ## 2     24  (7.62837 51.96292)      4      432434
+    ## 3     25 (7.628317 51.96308)      3      506093
+    ## 4     26 (7.626123 51.96065)      3      724992
+    ## 5     27 (7.626309 51.96067)      3      653364
+    ## 6     59 (7.623359 51.95995)      3      544089
     ## # … with 75 more rows
     ## #
     ## # Edge Data: 80 x 7
     ##    from    to highway                  geometry edgeID   length betweenness
     ##   <int> <int> <fct>            <LINESTRING [°]>  <int>      [m]       <dbl>
-    ## 1     2     3 reside… (7.62837 51.96292, 7.628…     13 18.62548      433530
-    ## 2     4     5 reside… (7.626123 51.96065, 7.62…     14 13.08964      651359
+    ## 1     2     3 reside… (7.62837 51.96292, 7.628…     13 18.62548      433722
+    ## 2     4     5 reside… (7.626123 51.96065, 7.62…     14 13.08964      651475
     ## 3     8     9 service (7.635255 51.96645, 7.63…     54 14.98778       33343
     ## # … with 77 more rows
 

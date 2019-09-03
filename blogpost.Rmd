@@ -102,7 +102,7 @@ ggplot(data = muenster_center) + geom_sf()
 ## From sf to tbl_graph: a step wise approach
 
 ### Step 1: Clean the network
-To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html) toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html) and [link2GI](https://github.com/r-spatial/link2GI) packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of Geocomputation with R. Take into account that the linking process may take up some time, especially on Windows operating systems.
+To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html) toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html) and [link2GI](https://github.com/r-spatial/link2GI) packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of Geocomputation with R. Take into account that the linking process may take up some time, especially on Windows operating systems. Also, note that there have been some large changes recently to the `rgrass7` package, which enabled a better integration with `sf`. However, it also means that the code below will not work when using an older version of `rgrass7`, so make sure to update if needed.
 
 Here, we will clean the network topology by breaking lines at intersections and also breaking lines that form a collapsed loop. This will be followed by a removal of duplicated geometry features. Once done, we will read the data back into R, and convert again into an `sf` object with `LINESTRING` geometry.
 
@@ -130,9 +130,7 @@ execGRASS(
 
 # Read back into R
 use_sf()
-muenster_center <- readVECT('muenster_cleaned') %>% 
-  st_as_sf() %>%
-  st_cast('LINESTRING') %>%
+muenster_center <- readVECT('muenster_cleaned') %>%
   rename(geometry = geom) %>%
   select(-cat)
 ```
@@ -278,7 +276,7 @@ graph
 
 With one flow of pipes, we can 'escape' the graph structure, turn either the edges or nodes back into real `sf` objects, and, for example, summarise the data based on a specific variable.
 
-```{r}
+```{r, warning = FALSE}
 graph %>%
   activate(edges) %>%
   as_tibble() %>%
@@ -335,7 +333,6 @@ ggplot() +
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, lwd = betweenness)) +
   scale_colour_viridis_c(option = 'inferno')
-## Hard to see the lines, maybe if the 'lwd' is set to the betweenness as well
 ```
 
 ### Shortest paths
