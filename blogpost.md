@@ -670,11 +670,7 @@ interactive map.
 
 ``` r
 tmap_mode('view')
-```
 
-    ## tmap mode set to interactive viewing
-
-``` r
 tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
   tm_lines() +
 tm_shape(graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf()) +
@@ -740,7 +736,7 @@ graph
 ``` r
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) + 
-  geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness), size = 2) +
+  geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
   scale_colour_viridis_c(option = 'inferno')
 ```
 
@@ -748,7 +744,7 @@ ggplot() +
 
 ``` r
 ggplot() +
-  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, lwd = betweenness)) +
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
   scale_colour_viridis_c(option = 'inferno')
 ```
 
@@ -801,7 +797,7 @@ and `both` returns them both.
 ``` r
 from_node <- graph %>%
   activate(nodes) %>%
-  filter(nodeID == 3285) %>%
+  filter(nodeID == 3284) %>%
   pull(nodeID)
 
 to_node <- graph %>%
@@ -821,30 +817,30 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 81/3321 vertices, from 9dfd9b2:
-    ##  [1] 3285 2314 1146 2410 2893 2892 1979 1978 1901 2407  448 3151 2847 1868
-    ## [15] 2070  152 1508 3014 3013 2951 2392 1201 1719 1197 3085 1194 1190  552
-    ## [29] 1577 1185 1182 2124 1176 2125   59 1925  920 3162 2134 1902 1903  330
-    ## [43] 1904   26   27 1961 1454 1455 1456 1457 1688 1911 1462   24   25 3073
-    ## [57]  753  756 1073 1475 1476 2693 2692 3061 1659  830 1656 1655 2854   11
-    ## [71] 1640 1091 1092   99 1234  101  100  275 3154 3163 3305
+    ## + 82/3321 vertices, from 45ad0b9:
+    ##  [1] 3284 2822 2905 2310 1382  226 2035  445  446  946  368  367 2848 2289
+    ## [15] 2239 2393  152 1508 3014 3013 2951 2392 1201 1719 1197 3085 1194 1190
+    ## [29]  552 1577 1185 1182 2124 1176 2125   59 1925  920 3162 2134 1902 1903
+    ## [43]  330 1904   26   27 1961 1454 1455 1456 1457 1688 1911 1462   24   25
+    ## [57] 3073  753  756 1073 1475 1476 2693 2692 3061 1659  830 1656 1655 2854
+    ## [71]   11 1640 1091 1092   99 1234  101  100  275 3154 3163 3305
 
 ``` r
 path$epath
 ```
 
     ## [[1]]
-    ## + 80/4681 edges from 9dfd9b2:
-    ##  [1] 2314--3285 1146--2314 1146--2410 2410--2893 2892--2893 1979--2892
-    ##  [7] 1978--1979 1901--1978 1901--2407  448--2407  448--3151 2847--3151
-    ## [13] 1868--2847 1868--2070  152--2070  152--1508 1508--3014 3013--3014
-    ## [19] 2951--3013 2392--2951 1201--2392 1201--1719 1197--1719 1197--3085
-    ## [25] 1194--3085 1190--1194  552--1190  552--1577 1185--1577 1182--1185
-    ## [31] 1182--2124 1176--2124 1176--2125   59--2125   59--1925  920--1925
-    ## [37]  920--3162 2134--3162 1902--2134 1902--1903  330--1903  330--1904
-    ## [43]   26--1904   26--  27   27--1961 1454--1961 1454--1455 1455--1456
-    ## [49] 1456--1457 1457--1688 1688--1911 1462--1911   24--1462   24--  25
-    ## [55]   25--3073  753--3073  753-- 756  756--1073 1073--1475 1475--1476
+    ## + 81/4681 edges from 45ad0b9:
+    ##  [1] 2822--3284 2822--2905 2310--2905 1382--2310  226--1382  226--2035
+    ##  [7]  445--2035  445-- 446  446-- 946  368-- 946  367-- 368  367--2848
+    ## [13] 2289--2848 2239--2289 2239--2393  152--2393  152--1508 1508--3014
+    ## [19] 3013--3014 2951--3013 2392--2951 1201--2392 1201--1719 1197--1719
+    ## [25] 1197--3085 1194--3085 1190--1194  552--1190  552--1577 1185--1577
+    ## [31] 1182--1185 1182--2124 1176--2124 1176--2125   59--2125   59--1925
+    ## [37]  920--1925  920--3162 2134--3162 1902--2134 1902--1903  330--1903
+    ## [43]  330--1904   26--1904   26--  27   27--1961 1454--1961 1454--1455
+    ## [49] 1455--1456 1456--1457 1457--1688 1688--1911 1462--1911   24--1462
+    ## [55]   24--  25   25--3073  753--3073  753-- 756  756--1073 1073--1475
     ## + ... omitted several edges
 
 ``` r
@@ -857,11 +853,11 @@ path_graph <- graph %>%
 path_graph
 ```
 
-    ## # A tbl_graph: 81 nodes and 80 edges
+    ## # A tbl_graph: 82 nodes and 81 edges
     ## #
     ## # An undirected simple graph with 1 component
     ## #
-    ## # Node Data: 81 x 4 (active)
+    ## # Node Data: 82 x 4 (active)
     ##   nodeID            geometry degree betweenness
     ##    <int>         <POINT [°]>  <dbl>       <dbl>
     ## 1     11 (7.633612 51.96548)      4      107917
@@ -870,21 +866,22 @@ path_graph
     ## 4     26 (7.626123 51.96065)      3      724992
     ## 5     27 (7.626309 51.96067)      3      653364
     ## 6     59 (7.623359 51.95995)      3      544089
-    ## # … with 75 more rows
+    ## # … with 76 more rows
     ## #
-    ## # Edge Data: 80 x 7
+    ## # Edge Data: 81 x 7
     ##    from    to highway                  geometry edgeID   length betweenness
     ##   <int> <int> <fct>            <LINESTRING [°]>  <int>      [m]       <dbl>
     ## 1     2     3 reside… (7.62837 51.96292, 7.628…     13 18.62548      433722
     ## 2     4     5 reside… (7.626123 51.96065, 7.62…     14 13.08964      651475
     ## 3     8     9 service (7.635255 51.96645, 7.63…     54 14.98778       33343
-    ## # … with 77 more rows
+    ## # … with 78 more rows
 
 ``` r
 ggplot() +
-  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') + 
-  geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.5, col = 'darkgrey') +
-  geom_sf(data = path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), lwd = 1, col = 'red')
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') +
+  geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey', size = 0.5) +
+  geom_sf(data = path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), lwd = 1, col = 'firebrick') +
+  geom_sf(data = path_graph %>% activate(nodes) %>% filter(nodeID %in% c(from_node, to_node)) %>% as_tibble() %>% st_as_sf(), size = 2)
 ```
 
 ![](blogpost_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
@@ -898,49 +895,19 @@ station of Münster to the cathedral.
 muenster_station <- st_point(c(7.6349, 51.9566)) %>% 
   st_sfc(crs = 4326)
 
-muenster_station
-```
-
-    ## Geometry set for 1 feature 
-    ## geometry type:  POINT
-    ## dimension:      XY
-    ## bbox:           xmin: 7.6349 ymin: 51.9566 xmax: 7.6349 ymax: 51.9566
-    ## epsg (SRID):    4326
-    ## proj4string:    +proj=longlat +datum=WGS84 +no_defs
-
-    ## POINT (7.6349 51.9566)
-
-``` r
 muenster_cathedral <- st_point(c(7.626, 51.962)) %>%
   st_sfc(crs = 4326)
 
-muenster_cathedral
+ggplot() +
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') +
+  geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey', size = 0.5) +
+  geom_sf(data = muenster_station, size = 2, col = 'firebrick') +
+  geom_sf(data = muenster_cathedral, size = 2, col = 'firebrick') +
+  geom_sf_label(data = muenster_station, aes(label = 'station'), nudge_x = 0.004) +
+  geom_sf_label(data = muenster_cathedral, aes(label = 'cathedral'), nudge_x = 0.005)
 ```
 
-    ## Geometry set for 1 feature 
-    ## geometry type:  POINT
-    ## dimension:      XY
-    ## bbox:           xmin: 7.626 ymin: 51.962 xmax: 7.626 ymax: 51.962
-    ## epsg (SRID):    4326
-    ## proj4string:    +proj=longlat +datum=WGS84 +no_defs
-
-    ## POINT (7.626 51.962)
-
-<!-- ```{r, eval=FALSE, echo=FALSE} -->
-
-<!-- text_o = "Muenster domplatz" -->
-
-<!-- text_d = "Muenster railway station" -->
-
-<!-- list_o = tmaptools::geocode_OSM(text_o) -->
-
-<!-- list_d = tmaptools::geocode_OSM(text_d) -->
-
-<!-- coords_o = matrix(list_o$coords, ncol = 2) -->
-
-<!-- coords_d = matrix(list_d$coords, ncol = 2) -->
-
-<!-- ``` -->
+![](blogpost_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 To find the route on the network, we must first identify the nearest
 points on the network. The `nabor` package has a well performing
@@ -973,8 +940,7 @@ node_o <- nodes[node_index_o$nn.idx, ]
 node_d <- nodes[node_index_d$nn.idx, ]
 ```
 
-Like before, we use the ID to calculate the shortest path, and plot it
-on an interactive map:
+Like before, we use the ID to calculate the shortest path, and plot it:
 
 ``` r
 path <- shortest_paths(
@@ -991,16 +957,14 @@ path_graph <- graph %>%
   activate(nodes) %>%
   slice(path$vpath %>% unlist())
 
-tmap_mode('view')
-```
-
-    ## tmap mode set to interactive viewing
-
-``` r
-tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
-  tm_lines(lwd = 1) +
-tm_shape(path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
-  tm_lines(col = "red", lwd = 3)
+ggplot() +
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') +
+  geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey', size = 0.5) +
+  geom_sf(data = path_graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), lwd = 1, col = 'firebrick') +
+  geom_sf(data = muenster_station, size = 2) +
+  geom_sf(data = muenster_cathedral, size = 2)  +
+  geom_sf_label(data = muenster_station, aes(label = 'station'), nudge_x = 0.004) +
+  geom_sf_label(data = muenster_cathedral, aes(label = 'cathedral'), nudge_x = 0.005)
 ```
 
 ![](blogpost_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
@@ -1027,77 +991,3 @@ are recommended:
   - Chapter 10 of Geocomputation with R, which provides context and
     demonstrates a transport planning workflow in R:
     <https://geocompr.robinlovelace.net/transport.html>
-
-<!-- For this purpose, the dodgr package, designed with a focus on routing in street networks, comes in handy. If we provide it the network, and the coordinates of the desired from and two points as two-column matrices, it will find the network points closest to the given locations, and calculate the shortest paths. In computing time, dodgr even outperforms igraph.  -->
-
-<!-- However, dodgr does not work with sf-like geometry list columns (yet?). Instead, it assumes the graph to be a single data.frame, or similar object, containing the longitudes and latitudes of the from and to nodes in distinct columns. Also, the distance column should be a numeric column called `dist`, and not a `units` class called `length`. Therefore, we need to take some pre-processing steps before we can use dodgr. Again, we will show an example of a shortest path from one location to another, but it is just as well possible to do the same for one to many, many to one, or many to many locations. -->
-
-<!-- ```{r, results='asis'} -->
-
-<!-- library(dodgr) -->
-
-<!-- node_coordinates <- graph %>% -->
-
-<!--   activate(nodes) %>% -->
-
-<!--   as_tibble() %>% -->
-
-<!--   st_as_sf() %>% -->
-
-<!--   st_coordinates() %>% -->
-
-<!--   as_tibble() %>% -->
-
-<!--   mutate(nodeID = graph %>% activate(nodes) %>% pull(nodeID)) -->
-
-<!-- dodgr_graph <- graph %>% -->
-
-<!--   activate(edges) %>% -->
-
-<!--   as_tibble() %>% -->
-
-<!--   mutate(dist = as.numeric(length)) %>%  -->
-
-<!--   rename(edge_id = edgeID) %>% -->
-
-<!--   left_join(node_coordinates, by = c('from' = 'nodeID')) %>% -->
-
-<!--   rename(from_id = from, from_lon = X, from_lat = Y) %>% -->
-
-<!--   left_join(node_coordinates, by = c('to' = 'nodeID')) %>% -->
-
-<!--   rename(to_id = to, to_lon = X, to_lat = Y) %>% -->
-
-<!--   select(edge_id, from_id, from_lon, from_lat, to_id, to_lon, to_lat, dist) %>%  -->
-
-<!--   as.data.frame() %>% # a tibble is not recognized by dodgr -->
-
-<!--   dodgr_components() # a requirement to for a dodgr_streetnet  -->
-
-<!-- dodgr_graph %>% head(10) %>% knitr::kable() -->
-
-<!-- ``` -->
-
-<!-- ```{r, error = TRUE} -->
-
-<!-- muenster_station <- st_point(c(7.6349, 51.9566)) %>% st_sfc(crs = 4326) %>% st_coordinates() -->
-
-<!-- muenster_station -->
-
-<!-- muenster_cathedral <- st_point(c(7.62199751, 51.957829502)) %>% st_sfc(crs = 4326) %>% st_coordinates() -->
-
-<!-- muenster_cathedral -->
-
-<!-- path <- dodgr::dodgr_paths( -->
-
-<!--   graph = dodgr_graph, -->
-
-<!--   from = muenster_cathedral, -->
-
-<!--   to = muenster_station -->
-
-<!-- ) -->
-
-<!-- path ## It works but just cannot find a path between the two points. Possibly has to do with the fact that the graph is undirected and dodgr only works with directed graphs.  -->
-
-<!-- ``` -->
