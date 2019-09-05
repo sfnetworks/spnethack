@@ -9,9 +9,9 @@ author: "Lorena Abad, Robin Lovelace & Lucas van der Meer"
 
 Street networks, shipping routes, telecommunication lines, river bassins. All examples of spatial networks: organized systems of nodes and edges embedded in space. For most of them, these nodes and edges can be associated with geographical coordinates. That is, the nodes are geographical points, and the edges geographical lines. 
 
-Such spatial networks can be analyzed using graph theory. Not for nothing, Leonhard Eulers famous work on the [Seven Bridges of Köningsberg](https://www.mathsisfun.com/activity/seven-bridges-konigsberg.html), which laid the foundations of graph theory and network analysis, was in essence a spatial problem.
+Such spatial networks can be analyzed using graph theory. Not for nothing, Leonhard Eulers famous work on the [Seven Bridges of Köningsberg](https://www.mathsisfun.com/activity/seven-bridges-konigsberg.html){target="_blank"}, which laid the foundations of graph theory and network analysis, was in essence a spatial problem.
 
-In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. As stated in this [github issue](https://github.com/r-spatial/sf/issues/966) and this [tweet](https://twitter.com/zevross/status/1089908839816794118), concensus on how best to represent and analyse spatial networks has proved elusive.
+In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. As stated in this [github issue](https://github.com/r-spatial/sf/issues/966){target="_blank"} and this [tweet](https://twitter.com/zevross/status/1089908839816794118){target="_blank"}, concensus on how best to represent and analyse spatial networks has proved elusive.
 
 This blogpost demonstrates an approach to spatial networks that starts with a set of geographic lines, and leads to an object ready to be used for network analysis.
 Along the way, we will see that there are still steps that need to be taken before the process of analyzing spatial networks in R is user friendly and efficient.
@@ -19,8 +19,8 @@ Along the way, we will see that there are still steps that need to be taken befo
 ## Existing R packages for spatial networks
 
 Although R was originally designed as a language for statistical computing, an active 'R-spatial' ecosystem has evolved.
-Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf) (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial) of Geocomputation with R for a brief history).
-Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph), which is based on  [igraph](https://igraph.org/).
+Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf){target="_blank"} (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial){target="_blank"} of Geocomputation with R for a brief history).
+Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph){target="_blank"}, which is based on  [igraph](https://igraph.org/){target="_blank"}.
 
 Both sf and tidygraph support the `tibble` class and the broader 'tidy' approach to data science, which involves data processing pipelines, type stability and a convention of representing everything as a data frame (well a `tibble`, which is a data frame with user friendly default settings).
 In sf, this means storing spatial vector data as objects of class `sf`, which are essentially the same as a regular data frame (or tibble), but with an additional 'sticky' list column containing a geometry for each feature (row), and attributes such as bounding box and CRS.
@@ -29,9 +29,9 @@ Tidygraph stores networks in objects of class `tbl_graph`. A `tbl_graph` is an `
 Both sf and tidygraph are relatively new packages (first released on CRAN in 2016 and 2017, respectively).
 It is unsurprising, therefore, that they have yet to be combined to allow a hybrid, tibble-based representation of spatial networks.
 
-Nevertheless, a number of approaches have been developed for representing spatial networks, and some of these are in packages that have been published on CRAN. [stplanr](https://github.com/ropensci/stplanr), for instance, contains the `SpatialLinesNetwork` class, which works with both the [sp](https://github.com/edzer/sp/) (a package for spatial data analysis launched in 2005) and sf packages.
-[dodgr](https://github.com/ATFutures/dodgr) is a more recent package that provides analytical tools for street networks, with a focus on directed graphs (that can have direction-dependent weights, e.g. representing a one-way street).
-Other packages seeking to implement spatial networks in R include [spnetwork](https://github.com/edzer/spnetwork), a package that defined a class system combining sp and igraph, and [shp2graph](https://cran.r-project.org/web/packages/shp2graph/index.html), which provides tools to switch between sp and igraph objects.
+Nevertheless, a number of approaches have been developed for representing spatial networks, and some of these are in packages that have been published on CRAN. [stplanr](https://github.com/ropensci/stplanr){target="_blank"}, for instance, contains the `SpatialLinesNetwork` class, which works with both the [sp](https://github.com/edzer/sp/){target="_blank"} (a package for spatial data analysis launched in 2005) and sf packages.
+[dodgr](https://github.com/ATFutures/dodgr){target="_blank"} is a more recent package that provides analytical tools for street networks, with a focus on directed graphs (that can have direction-dependent weights, e.g. representing a one-way street).
+Other packages seeking to implement spatial networks in R include [spnetwork](https://github.com/edzer/spnetwork){target="_blank"}, a package that defined a class system combining sp and igraph, and [shp2graph](https://cran.r-project.org/web/packages/shp2graph/index.html){target="_blank"}, which provides tools to switch between sp and igraph objects.
 
 Each package has its merits that deserve to be explored in more detail (possibly in a subsequent blog post).
 The remainder of this post outlines an approach that combines `sf` and `igraph` objects in a `tidygraph` object.
@@ -103,7 +103,7 @@ ggplot(data = muenster_center) + geom_sf()
 ## From sf to tbl_graph: a step wise approach
 
 ### Step 1: Clean the network
-To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html) toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html) and [link2GI](https://github.com/r-spatial/link2GI) packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html) of Geocomputation with R. Take into account that the linking process may take up some time, especially on Windows operating systems. Also, note that there have been some large changes recently to the `rgrass7` package, which enabled a better integration with `sf`. However, it also means that the code below will not work when using an older version of `rgrass7`, so make sure to update if needed.
+To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html){target="_blank"} toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html){target="_blank"} and [link2GI](https://github.com/r-spatial/link2GI){target="_blank"} packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html){target="_blank"} of Geocomputation with R. Take into account that the linking process may take up some time, especially on Windows operating systems. Also, note that there have been some large changes recently to the `rgrass7` package, which enabled a better integration with `sf`. However, it also means that the code below will not work when using an older version of `rgrass7`, so make sure to update if needed.
 
 Here, we will clean the network topology by breaking lines at intersections and also breaking lines that form a collapsed loop. This will be followed by a removal of duplicated geometry features. Once done, we will read the data back into R, and convert again into an `sf` object with `LINESTRING` geometry.
 
@@ -294,7 +294,7 @@ ggplot() +
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.5)
 ```
 
-Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/imap.html), you should be able to really interact with it!
+Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/imap.html){target="_blank"}, you should be able to really interact with it!
 
 ```{r, cache = TRUE, message = FALSE}
 tmap_mode('view')
