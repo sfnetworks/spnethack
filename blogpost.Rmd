@@ -108,7 +108,7 @@ To perform network analysis, we need a network with a clean topology. In theory,
 Here, we will clean the network topology by breaking lines at intersections and also breaking lines that form a collapsed loop. This will be followed by a removal of duplicated geometry features. Once done, we will read the data back into R, and convert again into an `sf` object with `LINESTRING` geometry.
 
 ```{r, eval=TRUE}
-# Link tot GRASS GIS
+# Link to GRASS GIS
 linkGRASS7(muenster_center, ver_select = TRUE)
 ```
 
@@ -326,15 +326,17 @@ graph
 
 ```{r, cache = TRUE}
 ggplot() +
-  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) + 
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'grey50') + 
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
-  scale_colour_viridis_c(option = 'inferno')
+  scale_colour_viridis_c(option = 'inferno') +
+  scale_size_continuous(range = c(0,4))
 ```
 
 ```{r, cache = TRUE}
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
-  scale_colour_viridis_c(option = 'inferno')
+  scale_colour_viridis_c(option = 'inferno') +
+  scale_size_continuous(range = c(0,4))
 ```
 
 ### Shortest paths
