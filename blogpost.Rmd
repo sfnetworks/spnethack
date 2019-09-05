@@ -490,10 +490,13 @@ For alternative approaches and further reading, the following resources are reco
 ```{r, engine='bash', eval=FALSE, echo=FALSE}
 git clone git@github.com:r-spatial/r-spatial.org
 cp blogpost.md r-spatial.org/_posts/2019-09-05-spatial-networks.markdown
+cp blogpost.Rmd r-spatial.org/_rmd/
 cd r-spatial.org
 git status
 git checkout -b spatialnet
 git remote add rob git@github.com:robinlovelace/r-spatial.org
+git add -A
+git commit -am 'Add .Rmd file'
 git push rob spatialnet
 ```
 
