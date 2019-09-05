@@ -3,6 +3,12 @@ output: github_document
 always_allow_html: yes
 title: "Spatial networks in R with sf and tidygraph"
 author: "Lorena Abad, Robin Lovelace & Lucas van der Meer"
+# manually add this stuff to .markdown
+categories: r
+comments: True
+date: September 5, 2019
+layout: post
+meta-json: {"layout":"post","categories":"r","date":"September 5, 2019","author":"Lorena Abad, Robin Lovelace & Lucas van der Meer","comments":true,"title":"Spatial networks in R with sf and tidygraph"}
 ---
 
 ## Introduction
@@ -480,3 +486,30 @@ For alternative approaches and further reading, the following resources are reco
 - dodgr, distances on directed graphs: https://github.com/ATFutures/dodgr
 - cppRouting, a package for routing in C++: https://github.com/vlarmet/cppRouting
 - Chapter 10 of Geocomputation with R, which provides context and demonstrates a transport planning workflow in R: https://geocompr.robinlovelace.net/transport.html
+
+```{r, engine='bash', eval=FALSE, echo=FALSE}
+git clone git@github.com:r-spatial/r-spatial.org
+cp blogpost.md r-spatial.org/_posts/2019-09-05-spatial-networks.markdown
+cd r-spatial.org
+git status
+git checkout -b spatialnet
+git remote add rob git@github.com:robinlovelace/r-spatial.org
+git push rob spatialnet
+```
+
+```{r, eval=FALSE, echo=FALSE}
+# edit markdown from
+txt = readLines("blogpost.md")
+txt_new_urls = gsub(pattern = "blogpost_files/", replacement = "https://github.com/spnethack/spnethack/raw/master/blogpost_files/", txt)
+writeLines(txt_new_urls, "r-spatial.org/_posts/2019-09-05-spatial-networks.markdown")
+file.edit("r-spatial.org/_posts/2019-09-05-spatial-networks.markdown")
+# edit that file manually
+
+# fail
+# setwd("r-spatial.org/")
+# blogdown::build_dir("r-spatial.org/_posts/")
+# blogdown::serve_site("r-spatial.org/")
+# file.remove("r-spatial.org/")
+```
+
+

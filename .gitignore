@@ -10,4 +10,5 @@ etl_*
 *.html
 muenster*
 blogpost*
-junk
+junkr-spatial*
+r-spatial.org/

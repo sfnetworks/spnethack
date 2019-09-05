@@ -1,6 +1,7 @@
 Spatial networks in R with sf and tidygraph
 ================
 Lorena Abad, Robin Lovelace & Lucas van der Meer
+September 5, 2019
 
 ## Introduction
 
@@ -211,7 +212,7 @@ done, we will read the data back into R, and convert again into an `sf`
 object with `LINESTRING` geometry.
 
 ``` r
-# Link tot GRASS GIS
+# Link to GRASS GIS
 linkGRASS7(muenster_center, ver_select = TRUE)
 ```
 
@@ -739,9 +740,10 @@ graph
 
 ``` r
 ggplot() +
-  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) + 
+  geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'grey50') + 
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
-  scale_colour_viridis_c(option = 'inferno')
+  scale_colour_viridis_c(option = 'inferno') +
+  scale_size_continuous(range = c(0,4))
 ```
 
 ![](blogpost_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
@@ -749,7 +751,8 @@ ggplot() +
 ``` r
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
-  scale_colour_viridis_c(option = 'inferno')
+  scale_colour_viridis_c(option = 'inferno') +
+  scale_size_continuous(range = c(0,4))
 ```
 
 ![](blogpost_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
@@ -821,7 +824,7 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 37/3322 vertices, from d784820:
+    ## + 37/3322 vertices, from 2a7ce22:
     ##  [1] 3284 1200 1199 1201 1721 1197 3086 1194 1190  552 1579 1185 1182 2126
     ## [15] 1176 2127   59 1927  920 3163 2136 1904 2599 2592 1531 1530 1529 1137
     ## [29] 1138 1139 1140 1552 1551 1982 2895 2364 3305
@@ -831,7 +834,7 @@ path$epath
 ```
 
     ## [[1]]
-    ## + 36/4680 edges from d784820:
+    ## + 36/4680 edges from 2a7ce22:
     ##  [1] 1200--3284 1199--1200 1199--1201 1201--1721 1197--1721 1197--3086
     ##  [7] 1194--3086 1190--1194  552--1190  552--1579 1185--1579 1182--1185
     ## [13] 1182--2126 1176--2126 1176--2127   59--2127   59--1927  920--1927
