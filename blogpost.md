@@ -1,7 +1,7 @@
 Spatial networks in R with sf and tidygraph
 ================
 Lucas van der Meer, Robin Lovelace & Lorena Abad
-September 25, 2019
+September 26, 2019
 
 ## Introduction
 
@@ -823,7 +823,7 @@ path$vpath
 ```
 
     ## [[1]]
-    ## + 50/3329 vertices, from 23d297f:
+    ## + 50/3329 vertices, from 2ee524d:
     ##  [1] 3044 3043 1581 1076 1059 1058 1270 1489  609  608 1549 1550 2998 2448
     ## [15] 2057 1528 1529 1530 1531 1532 1533 1534 1535 1536 1537 1538 1539 1468
     ## [29] 1469 1470 1471 1704 1916 1476   23   24 3064  740  743 1053 1490 1447
@@ -834,7 +834,7 @@ path$epath
 ```
 
     ## [[1]]
-    ## + 49/4667 edges from 23d297f:
+    ## + 49/4667 edges from 2ee524d:
     ##  [1] 3043--3044 1581--3043 1076--1581 1059--1076 1058--1059 1058--1270
     ##  [7] 1270--1489  609--1489  608-- 609  608--1549 1549--1550 1550--2998
     ## [13] 2448--2998 2057--2448 1528--2057 1528--1529 1529--1530 1530--1531
@@ -1005,10 +1005,12 @@ are recommended:
 
   - sfnetworks, a GitHub package that implements some of the ideas in
     this post: <https://github.com/luukvdmeer/sfnetworks>
-  - stplanr, a package for transport planning:
+  - stplanr, a package for transport planning, which contains
+    [functions](https://docs.ropensci.org/stplanr/articles/stplanr-route-nets.html#spatiallinenetworks)
+    for creating and working with spatial `sf`/`igraph` networks:
     <https://github.com/ropensci/stplanr>
-  - dodgr, distances on directed graphs:
-    <https://github.com/ATFutures/dodgr>
+  - dodgr, a package for calculating distances and other outputs on
+    directed graphs: <https://github.com/ATFutures/dodgr>
   - cppRouting, a package for routing in C++:
     <https://github.com/vlarmet/cppRouting>
   - Chapter 10 of Geocomputation with R, which provides context and

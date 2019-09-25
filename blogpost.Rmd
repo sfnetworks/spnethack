@@ -6,7 +6,7 @@ author: "Lucas van der Meer, Robin Lovelace & Lorena Abad"
 # manually add this stuff to .markdown
 categories: r
 comments: True
-date: September 25, 2019
+date: September 26, 2019
 layout: post
 meta-json: {"layout":"post","categories":"r","date":"September 25, 2019","author":"Lucas van der Meer, Robin Lovelace & Lorena Abad","comments":true,"title":"Spatial networks in R with sf and tidygraph"}
 ---
@@ -524,8 +524,8 @@ Future functionality should look to make spatial networks more user friendly, in
 For alternative approaches and further reading, the following resources are recommended:
 
 - sfnetworks, a GitHub package that implements some of the ideas in this post: https://github.com/luukvdmeer/sfnetworks
-- stplanr, a package for transport planning: https://github.com/ropensci/stplanr
-- dodgr, distances on directed graphs: https://github.com/ATFutures/dodgr
+- stplanr, a package for transport planning, which contains [functions](https://docs.ropensci.org/stplanr/articles/stplanr-route-nets.html#spatiallinenetworks) for creating and working with spatial `sf`/`igraph` networks: https://github.com/ropensci/stplanr
+- dodgr, a package for calculating distances and other outputs on directed graphs: https://github.com/ATFutures/dodgr
 - cppRouting, a package for routing in C++: https://github.com/vlarmet/cppRouting
 - Chapter 10 of Geocomputation with R, which provides context and demonstrates a transport planning workflow in R: https://geocompr.robinlovelace.net/transport.html
 
