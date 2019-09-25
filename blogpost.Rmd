@@ -2,13 +2,13 @@
 output: github_document
 always_allow_html: yes
 title: "Spatial networks in R with sf and tidygraph"
-author: "Lorena Abad, Robin Lovelace & Lucas van der Meer"
+author: "Lucas van der Meer, Robin Lovelace & Lorena Abad"
 # manually add this stuff to .markdown
 categories: r
 comments: True
-date: September 5, 2019
+date: September 25, 2019
 layout: post
-meta-json: {"layout":"post","categories":"r","date":"September 5, 2019","author":"Lorena Abad, Robin Lovelace & Lucas van der Meer","comments":true,"title":"Spatial networks in R with sf and tidygraph"}
+meta-json: {"layout":"post","categories":"r","date":"September 25, 2019","author":"Lucas van der Meer, Robin Lovelace & Lorena Abad","comments":true,"title":"Spatial networks in R with sf and tidygraph"}
 ---
 
 ## Introduction
@@ -102,7 +102,7 @@ muenster_center <- muenster$osm_lines %>%
 muenster_center
 ```
 
-```{r, cache = TRUE}
+```{r}
 ggplot(data = muenster_center) + geom_sf()
 ```
 
@@ -294,7 +294,7 @@ graph %>%
 
 Switching back to `sf` objects is useful as well when plotting the network, in a way that preserves its spatial properties.
 
-```{r, cache = TRUE}
+```{r}
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) + 
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), size = 0.5)
@@ -302,7 +302,7 @@ ggplot() +
 
 Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/imap.html){target="_blank"}, you should be able to really interact with it!
 
-```{r, cache = TRUE, message = FALSE}
+```{r, message = FALSE}
 tmap_mode('view')
 
 tm_shape(graph %>% activate(edges) %>% as_tibble() %>% st_as_sf()) +
@@ -330,7 +330,7 @@ graph <- graph %>%
 graph
 ```
 
-```{r, cache = TRUE}
+```{r}
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'grey50') + 
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
@@ -338,7 +338,7 @@ ggplot() +
   scale_size_continuous(range = c(0,4))
 ```
 
-```{r, cache = TRUE}
+```{r}
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), aes(col = betweenness, size = betweenness)) +
   scale_colour_viridis_c(option = 'inferno') +
@@ -364,12 +364,12 @@ The function 'shortest_paths' not only returns distances, but also the indices o
 ```{r}
 from_node <- graph %>%
   activate(nodes) %>%
-  filter(nodeID == 3284) %>%
+  filter(nodeID == 3044) %>%
   pull(nodeID)
 
 to_node <- graph %>%
   activate(nodes) %>%
-  filter(nodeID == 3305) %>%
+  filter(nodeID == 3282) %>%
   pull(nodeID)
 
 path <- shortest_paths(
@@ -384,16 +384,30 @@ path$vpath
 
 path$epath
 
+```
+
+A subgraph of the original graph can now be created, containing only those nodes and edges that are part of the calculated path. Note here that something inconvenient happens: `igraph` seems to have it's own underlying structure for attaching indices to nodes, which makes that the `from` and `to` columns in the egdes data don't match with our `nodeID` column in the nodes data anymore, but instead simply refer to the row numbers of the nodes data.
+
+```{r}
 path_graph <- graph %>%
-  activate(edges) %>%
-  slice(path$epath %>% unlist()) %>%
-  activate(nodes) %>%
-  slice(path$vpath %>% unlist())
+    subgraph.edges(eids = path$epath %>% unlist()) %>%
+    as_tbl_graph()
 
 path_graph
 ```
 
-```{r, cache = TRUE}
+This subgraph can now be analyzed, for example by calculating the total length of the path, ...
+
+```{r}
+path_graph %>%
+  activate(edges) %>%
+  as_tibble() %>%
+  summarise(length = sum(length))
+```
+
+... and plotted.
+
+```{r}
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') +
   geom_sf(data = graph %>% activate(nodes) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey', size = 0.5) +
@@ -459,10 +473,8 @@ path <- shortest_paths(
 )
 
 path_graph <- graph %>%
-  activate(edges) %>%
-  slice(path$epath %>% unlist()) %>%
-  activate(nodes) %>%
-  slice(path$vpath %>% unlist())
+    subgraph.edges(eids = path$epath %>% unlist()) %>%
+    as_tbl_graph()
 
 ggplot() +
   geom_sf(data = graph %>% activate(edges) %>% as_tibble() %>% st_as_sf(), col = 'darkgrey') +
