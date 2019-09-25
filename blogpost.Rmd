@@ -112,10 +112,39 @@ ggplot(data = muenster_center) + geom_sf()
 To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. The [v.clean](https://grass.osgeo.org/grass77/manuals/v.clean.html){target="_blank"} toolset from the GRASS GIS software provides automated functionalities for this task, and is therefore a popular instrument within the field of spatial network analysis. As far as we know, there is no R equivalent for this toolset, but fortunately, the [rgrass7](https://cran.r-project.org/web/packages/rgrass7/index.html){target="_blank"} and [link2GI](https://github.com/r-spatial/link2GI){target="_blank"} packages enable us to easily 'bridge' to GRASS GIS. Obviously, this requires to have GRASS GIS installed on your computer. For an in depth description of combining R with open source GIS software, see [Chapter 9](https://geocompr.robinlovelace.net/gis.html){target="_blank"} of Geocomputation with R. Take into account that the linking process may take up some time, especially on Windows operating systems. Also, note that there have been some large changes recently to the `rgrass7` package, which enabled a better integration with `sf`. However, it also means that the code below will not work when using an older version of `rgrass7`, so make sure to update if needed.
 
 Here, we will clean the network topology by breaking lines at intersections and also breaking lines that form a collapsed loop. This will be followed by a removal of duplicated geometry features. Once done, we will read the data back into R, and convert again into an `sf` object with `LINESTRING` geometry.
+For this we use **rgrass7**, which requires some set-up code that can be seen in the [source code](https://github.com/spnethack/spnethack/blob/master/blogpost.Rmd#L116-L142) of this post.
 
-```{r, eval=TRUE}
+```{r, eval=TRUE, echo=FALSE, message=FALSE, results='hide'}
 # Link to GRASS GIS
-linkGRASS7(muenster_center, ver_select = TRUE)
+# linkGRASS7(x = muenster_center, ver_select = TRUE, default_GRASS7 = "/usr/lib/grass78/")
+gisBase = ifelse(Sys.info()[["sysname"]] == "Linux", "/usr/lib/grass78/", "C://Program Files//GRASS GIS 7.6")
+location <- basename(tempfile())
+gisdbase <- tempdir()
+corner <- st_bbox(muenster_center)
+
+xmax <- corner[3]
+xmin <- corner[1]
+ymax <- corner[4]
+ymin <- corner[2]
+proj4 <- unlist(sf::st_crs(muenster_center)[2])
+resolution <- "1"
+
+gisBase = ifelse(Sys.info()[["sysname"]] == "Linux", "/usr/lib/grass78/", "C://Program Files//GRASS GIS 7.6")
+
+initGRASS(
+  gisBase = gisBase,
+  home = tempdir(), 
+  gisDbase = gisdbase, 
+  mapset = "PERMANENT", 
+  location = location,
+  override = TRUE,
+)
+
+execGRASS("g.proj", flags = c("c", "quiet"), proj4 = proj4)
+execGRASS("g.region", flags = c("quiet"), 
+          n = as.character(ymax), s = as.character(ymin), 
+          e = as.character(xmax), w = as.character(xmin), 
+          res = as.character(resolution))
 ```
 
 ```{r, message = FALSE, warning = FALSE, results = FALSE}
@@ -127,6 +156,7 @@ writeVECT(
 )
 
 # Execute the v.clean tool
+execGRASS("g.proj", flags = c("c", "quiet"), proj4 = proj4)
 execGRASS(
   cmd = 'v.clean', 
   input = 'muenster_center', 
