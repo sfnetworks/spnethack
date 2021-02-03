@@ -1,0 +1,14 @@
+base
+sf
+tidygraph
+igraph
+dplyr
+tibble
+ggplot2
+units
+osmdata
+sp
+XML
+rgrass7
+bindrcpp
+tmap

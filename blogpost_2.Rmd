@@ -1,0 +1,358 @@
+---
+output: github_document
+always_allow_html: yes
+title: "Spatial networks in R with sf and tidygraph"
+author: "Lucas van der Meer, Robin Lovelace & Lorena Abad"
+# manually add this stuff to .markdown
+categories: r
+comments: True
+date: September 25, 2019
+layout: post
+meta-json: {"layout":"post","categories":"r","date":"September 25, 2019","author":"Lucas van der Meer, Robin Lovelace & Lorena Abad","comments":true,"title":"Spatial networks in R with sf and tidygraph"}
+---
+
+## Introduction
+
+Street networks, shipping routes, telecommunication lines, river bassins. All examples of spatial networks: organized systems of nodes and edges embedded in space. For most of them, these nodes and edges can be associated with geographical coordinates. That is, the nodes are geographical points, and the edges geographical lines. 
+
+Such spatial networks can be analyzed using graph theory. Not for nothing, Leonhard Eulers famous work on the [Seven Bridges of Köningsberg](https://www.mathsisfun.com/activity/seven-bridges-konigsberg.html){target="_blank"}, which laid the foundations of graph theory and network analysis, was in essence a spatial problem.
+
+In R, there are advanced, modern tools for both the analysis of spatial data and networks. Furthermore, several packages have been developed that cover (parts of) spatial network analysis. As stated in this [github issue](https://github.com/r-spatial/sf/issues/966){target="_blank"} and this [tweet](https://twitter.com/zevross/status/1089908839816794118){target="_blank"}, concensus on how best to represent and analyse spatial networks has proved elusive.
+
+This blogpost demonstrates an approach to spatial networks that starts with a set of geographic lines, and leads to an object ready to be used for network analysis.
+Along the way, we will see that there are still steps that need to be taken before the process of analyzing spatial networks in R is user friendly and efficient.
+
+## Existing R packages for spatial networks
+
+Although R was originally designed as a language for statistical computing, an active 'R-spatial' ecosystem has evolved.
+Powerful and high performance packages for spatial data analysis have been developed, thanks largely to interfaces to mature C/C++ libraries such as GDAL, GEOS and PROJ, notably in the package [sf](https://github.com/r-spatial/sf){target="_blank"} (see [section 1.5 ](https://geocompr.robinlovelace.net/intro.html#the-history-of-r-spatial){target="_blank"} of Geocomputation with R for a brief history).
+Likewise, a number of packages for graph representation and analysis have been developed, notably [tidygraph](https://github.com/thomasp85/tidygraph){target="_blank"}, which is based on  [igraph](https://igraph.org/){target="_blank"}.
+
+Both sf and tidygraph support the `tibble` class and the broader 'tidy' approach to data science, which involves data processing pipelines, type stability and a convention of representing everything as a data frame (well a `tibble`, which is a data frame with user friendly default settings).
+In sf, this means storing spatial vector data as objects of class `sf`, which are essentially the same as a regular data frame (or tibble), but with an additional 'sticky' list column containing a geometry for each feature (row), and attributes such as bounding box and CRS.
+Tidygraph stores networks in objects of class `tbl_graph`. A `tbl_graph` is an `igraph` object, but enables the user to manipulate both the edges and nodes elements as if they were data frames also.
+
+Both sf and tidygraph are relatively new packages (first released on CRAN in 2016 and 2017, respectively).
+It is unsurprising, therefore, that they have yet to be combined to allow a hybrid, tibble-based representation of spatial networks.
+
+Nevertheless, a number of approaches have been developed for representing spatial networks, and some of these are in packages that have been published on CRAN. [stplanr](https://github.com/ropensci/stplanr){target="_blank"}, for instance, contains the `SpatialLinesNetwork` class, which works with both the [sp](https://github.com/edzer/sp/){target="_blank"} (a package for spatial data analysis launched in 2005) and sf packages.
+[dodgr](https://github.com/ATFutures/dodgr){target="_blank"} is a more recent package that provides analytical tools for street networks, with a focus on directed graphs (that can have direction-dependent weights, e.g. representing a one-way street).
+Other packages seeking to implement spatial networks in R include [spnetwork](https://github.com/edzer/spnetwork){target="_blank"}, a package that defined a class system combining sp and igraph, and [shp2graph](https://cran.r-project.org/web/packages/shp2graph/index.html){target="_blank"}, which provides tools to switch between sp and igraph objects.
+
+Each package has its merits that deserve to be explored in more detail (possibly in a subsequent blog post).
+The remainder of this post outlines an approach that combines `sf` and `igraph` objects in a `tidygraph` object.
+
+## Set-up
+
+The following code chunk will install the packages used in this post:
+
+```{r, eval=FALSE, message=FALSE}
+# We'll use remotes to install packages, install it if needs be:
+if(!"remotes" %in% installed.packages()) {
+  install.packages("remotes")
+}
+
+cran_pkgs = c(
+  "sf",
+  "tidygraph",
+  "sfnetworks",
+  "osmdata",
+  "tidyverse",
+  "ggplot2",
+  "units",
+  "tmap",
+)
+
+remotes::install_cran(cran_pkgs)
+```
+
+```{r, warning = FALSE, message = FALSE}
+library(sf)
+library(tidygraph)
+library(sfnetworks)
+library(tidyverse)
+library(ggplot2)
+library(units)
+library(tmap)
+library(osmdata)
+```
+
+## Getting the data 
+As an example, we use the street network of the city center of Münster, Germany. We will get the data from OpenStreetMap. Packages like `dodgr` have optimized their code for such data, however considering that we want to showcase this workflow for any source of data, we will generate an object of class `sf` containing only `LINESTRING` geometries. However, streets that form loops, are returned by `osmdata` as polygons, rather than lines. These, we will convert to lines, using the `osm_poly2line` function. One additional variable, the type of street, is added to show that the same steps can be used for `sf` objects that contain any number of additional variables.
+
+```{r}
+muenster <- opq(bbox =  c(7.61, 51.954, 7.636, 51.968)) %>% 
+  add_osm_feature(key = 'highway') %>% 
+  osmdata_sf() %>% 
+  osm_poly2line()
+
+muenster_center <- muenster$osm_lines %>% 
+  select(highway)
+```
+
+```{r}
+muenster_center
+```
+
+```{r}
+ggplot(data = muenster_center) + geom_sf()
+```
+
+
+## From sf to sfnetwork: so much has changed!
+
+If you read our previous blogpost, you will realize we went through a long list of steps to come up with an object of class `tbl_graph`. Since that blogpost, the `sfnetworks` package has made this whole process significantly easier. Let's look now at our simplified stepwise approach!
+
+### Step 1: Construct the network
+
+```{r}
+muenster_center_comb = muenster_center %>% 
+  st_combine() %>% 
+  st_node() %>% 
+  st_cast('LINESTRING') 
+
+muenster_center_comb2 = muenster_center_comb %>% 
+  st_as_sf() %>% 
+  st_join(muenster_center, join = st_covered_by)
+
+graph = as_sfnetwork(muenster_center_comb2, directed = F)
+graph
+```
+
+### Step 2: Clean the network
+
+To perform network analysis, we need a network with a clean topology. In theory, the best way to clean up the network topology is by manual editing, but this can be very labour intensive and time consuming, mainly for large networks. 
+
+In sfnetworks, we have implemented several cleaning functions as spatial morphers. To learn more about spatial morphers and what they are, see the [dedicated vignette](https://luukvdmeer.github.io/sfnetworks/articles/morphers.html) for that.
+
+
+```{r}
+(graph = graph %>%
+  convert(to_spatial_subdivision, .clean = T))
+
+(graph = graph %>% 
+  convert(to_spatial_smooth, .clean = T))
+
+(graph = graph %>% 
+  convert(to_spatial_simple, .clean = T))
+```
+
+
+## Combining the best of both worlds
+Having the network stored in the tbl_graph structure, with a geometry list column for both the edges and nodes, enables us to combine the wide range of functionalities in sf and tidygraph, in a way that fits neatly into the tidyverse.
+
+With the `activate()` verb, we specify if we want to manipulate the edges or the nodes. Then, most dplyr verbs can be used in the familiar way, also when directly applied to the geometry list column. For example, we can add a variable describing the length of each edge, which, later, we use as a weight for the edges.
+
+```{r}
+graph <- graph %>%
+  activate(edges) %>%
+  mutate(length = edge_length())
+
+graph
+```
+
+With one flow of pipes, we can 'escape' the graph structure, turn either the edges or nodes back into real `sf` objects, and, for example, summarise the data based on a specific variable.
+
+```{r, warning = FALSE}
+graph %>%
+  activate(edges) %>%
+  st_as_sf() %>%
+  group_by(highway) %>%
+  summarise(length = sum(length))
+```
+
+Switching back to `sf` objects is useful as well when plotting the network, in a way that preserves its spatial properties.
+
+```{r}
+ggplot() +
+  geom_sf(data = st_as_sf(graph, "edges")) + 
+  geom_sf(data = st_as_sf(graph, "nodes"), size = 0.5)
+```
+
+Or, alternatively, in only a few lines of code, plot the network as an interactive map. On this page, the interactive map might show as an image, but [here](https://luukvdmeer.github.io/spnethack/imap.html){target="_blank"}, you should be able to really interact with it!
+
+```{r, message = FALSE}
+tmap_mode('view')
+
+tm_shape(st_as_sf(graph, "edges")) +
+  tm_lines() +
+tm_shape(st_as_sf(graph, "nodes")) +
+  tm_dots() +
+tmap_options(basemaps = 'OpenStreetMap')
+```
+
+All nice and well, but these are not things that we necessarily need the graph representation for. The added value of tidygraph, is that it opens the door to the functions of the igraph library, all specifically designed for network analysis, and enables us to use them inside a 'tidy' workflow. To cover them all, we would need to write a book, but let's at least show a few examples below.
+
+### Centrality measures
+Centraltity measures describe the importances of nodes in the network. The simplest of those measures is the degree centrality: the number of edges connected to a node. Another example is the betweenness centrality, which, simply stated, is the number of shortest paths that pass through a node. In tidygraph, we can calculate these and many other centrality measures, and simply add them as a variable to the nodes.
+
+The betweenness centrality can also be calculated for edges. In that case, it specifies the number of shortest paths that pass through an edge.
+
+```{r}
+graph <- graph %>%
+  activate(nodes) %>%
+  mutate(degree = centrality_degree()) %>%
+  mutate(betweenness = centrality_betweenness(weights = length)) %>%
+  activate(edges) %>%
+  mutate(betweenness = centrality_edge_betweenness(weights = length))
+
+graph
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = st_as_sf(graph, "edges"), col = 'grey50') + 
+  geom_sf(data = st_as_sf(graph, "nodes"), aes(col = betweenness, size = betweenness)) +
+  scale_colour_viridis_c(option = 'inferno') +
+  scale_size_continuous(range = c(0,4))
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = st_as_sf(graph, "edges"), 
+          aes(col = betweenness, size = betweenness)) +
+  scale_colour_viridis_c(option = 'inferno') +
+  scale_size_continuous(range = c(0,4))
+```
+
+### Shortest paths
+A core part of spatial network analysis is generally finding the path between two nodes that minimizes either the travel distance or travel time. In igraph, there are several functions that can be used for this purpose, and since a `tbl_graph` is just a subclass of an `igraph` object, we can directly input it into every function in the igraph package.
+
+The function `distances`, for example, returns a numeric matrix containing the distances of the shortest paths between every possible combination of nodes. It will automatically choose a suitable algorithm to calculate these shortest paths.
+
+```{r}
+distances <- st_network_cost(graph, weights = "length")
+
+distances[1:5, 1:5]
+```
+
+The function 'shortest_paths' not only returns distances, but also the indices of the nodes and edges that make up the path. When we relate them to their corresponding geometry columns, we get the spatial representation of the shortest paths. Instead of doing this for all possible combinations of nodes, we can specify from and to which nodes we want to calculate the shortest paths. Here, we will show an example of a shortest path from one node to another, but it is just as well possible to do the same for one to many, many to one, or many to many nodes. Whenever the graph is weighted, the Dijkstra algoritm will be used under the hood. Note here that we have to define the desired output beforehand: `vpath` means that only the nodes (called vertices in igraph) are returned, `epath` means that only the edges are returned, and `both` returns them both.
+
+```{r}
+path = st_network_paths(graph, from = 18, to = 1823, weights = "length")
+
+path %>% 
+  pull(node_paths) %>%
+  unlist()
+
+path %>% 
+  pull(edge_paths) %>%
+  unlist()
+```
+
+A subgraph of the original graph can now be created, containing only those nodes and edges that are part of the calculated path. Note here that something inconvenient happens: `igraph` seems to have it's own underlying structure for attaching indices to nodes, which makes that the `from` and `to` columns in the egdes data don't match with our `nodeID` column in the nodes data anymore, but instead simply refer to the row numbers of the nodes data.
+
+```{r}
+path_graph <- graph %>%
+    convert(to_spatial_shortest_paths, 18, 1823, weights = "length")
+
+path_graph
+```
+
+This subgraph can now be analyzed, for example by calculating the total length of the path, ...
+
+```{r}
+path_graph %>%
+  activate(edges) %>%
+  as_tibble() %>%
+  summarise(length = sum(length))
+```
+
+... and plotted.
+
+```{r}
+ggplot() +
+  geom_sf(data = st_as_sf(graph, "edges"), col = 'darkgrey') +
+  geom_sf(data = st_as_sf(graph, "nodes"), col = 'darkgrey', size = 0.5) +
+  geom_sf(data = st_as_sf(path_graph, "edges"), lwd = 1, col = 'firebrick') +
+  geom_sf(data = st_as_sf(path_graph, "nodes"), size = 2)
+```
+
+However, often we will be interested in shortest paths between geographical points that are not necessarily nodes in the network. For example, we might want to calculate the shortest path from the railway station of Münster to the cathedral.
+
+```{r, warning = FALSE}
+muenster_station <- st_point(c(7.6349, 51.9566)) %>% 
+  st_sfc(crs = 4326)
+
+muenster_cathedral <- st_point(c(7.626, 51.962)) %>%
+  st_sfc(crs = 4326)
+
+ggplot() +
+  geom_sf(data = st_as_sf(graph, "edges"), col = 'darkgrey') +
+  geom_sf(data = st_as_sf(graph, "nodes"), col = 'darkgrey', size = 0.5) +
+  geom_sf(data = muenster_station, size = 2, col = 'firebrick') +
+  geom_sf(data = muenster_cathedral, size = 2, col = 'firebrick') +
+  geom_sf_label(data = muenster_station, aes(label = 'station'), nudge_x = 0.004) +
+  geom_sf_label(data = muenster_cathedral, aes(label = 'cathedral'), nudge_x = 0.005)
+```
+
+To find the route on the network, we must first identify the nearest points on the network. The `nabor` package has a well performing function to do so. It does, however, require the coordinates of the origin and destination nodes to be given in a matrix.
+
+Like before, we use the ID to calculate the shortest path, and plot it:
+
+```{r, warning = FALSE}
+path_graph <- graph %>%
+    convert(
+      to_spatial_shortest_paths, 
+      from = muenster_station, 
+      to = muenster_cathedral,
+      weights = "length"
+    )
+
+path_graph
+ggplot() +
+  geom_sf(data = st_as_sf(graph, "edges"), col = 'darkgrey') +
+  geom_sf(data = st_as_sf(graph, "nodes"), 
+          col = 'darkgrey', size = 0.5) +
+  geom_sf(data = st_as_sf(path_graph, "edges"), 
+          lwd = 1, col = 'firebrick') +
+  geom_sf(data = muenster_station, size = 2) +
+  geom_sf(data = muenster_cathedral, size = 2)  +
+  geom_sf_label(data = muenster_station, 
+                aes(label = 'station'), nudge_x = 0.004) +
+  geom_sf_label(data = muenster_cathedral, 
+                aes(label = 'cathedral'), nudge_x = 0.005)
+```
+
+It worked!
+We calculated a path from the rail station to the centre, a common trip taken by tourists visiting Muenster.
+Clearly this is not a finished piece of work but the post has demonstrated what is possible.
+Future functionality should look to make spatial networks more user friendly, including provision of 'weighting profiles', batch routing and functions that reduce the number of steps needed to work with spatial network data in R.
+
+For alternative approaches and further reading, the following resources are recommended:
+
+- sfnetworks, a GitHub package that implements some of the ideas in this post: https://github.com/luukvdmeer/sfnetworks
+- stplanr, a package for transport planning: https://github.com/ropensci/stplanr
+- dodgr, distances on directed graphs: https://github.com/ATFutures/dodgr
+- cppRouting, a package for routing in C++: https://github.com/vlarmet/cppRouting
+- Chapter 10 of Geocomputation with R, which provides context and demonstrates a transport planning workflow in R: https://geocompr.robinlovelace.net/transport.html
+
+```{r, engine='bash', eval=FALSE, echo=FALSE}
+git clone git@github.com:r-spatial/r-spatial.org
+cp blogpost.md r-spatial.org/_posts/2019-09-05-spatial-networks.markdown
+cp blogpost.Rmd r-spatial.org/_rmd/
+cd r-spatial.org
+git status
+git checkout -b spatialnet
+git remote add rob git@github.com:robinlovelace/r-spatial.org
+git add -A
+git commit -am 'Add .Rmd file'
+git push rob spatialnet
+```
+
+```{r, eval=FALSE, echo=FALSE}
+# edit markdown from
+txt = readLines("blogpost.md")
+txt_new_urls = gsub(pattern = "blogpost_files/", replacement = "https://github.com/spnethack/spnethack/raw/master/blogpost_files/", txt)
+writeLines(txt_new_urls, "r-spatial.org/_posts/2019-09-05-spatial-networks.markdown")
+file.edit("r-spatial.org/_posts/2019-09-05-spatial-networks.markdown")
+# edit that file manually
+
+# fail
+# setwd("r-spatial.org/")
+# blogdown::build_dir("r-spatial.org/_posts/")
+# blogdown::serve_site("r-spatial.org/")
+# file.remove("r-spatial.org/")
+```
+
+
